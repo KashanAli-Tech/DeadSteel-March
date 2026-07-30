@@ -46,6 +46,9 @@ namespace Coursework.GameObjects
 
             EdgeCollide();
             JustSpawned = false;
+
+            float dt = (float)gameTime.ElapsedGameTime.TotalSeconds;
+            attackTimer -= dt;
         }
 
         public virtual void Draw(SpriteBatch spriteBatch)

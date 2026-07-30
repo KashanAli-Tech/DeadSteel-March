@@ -49,7 +49,9 @@ namespace Coursework.States
         // Music
         private Song gameplayMusic;
 
-        
+        private KeyboardState previousKeyboardState;
+
+
         // GAME OBJECTS & MANAGERS
         private UnitManager unitManager;
         private ShellManager shellManager;
@@ -161,12 +163,19 @@ namespace Coursework.States
 
         public override void Update(GameTime gameTime)
         {
+            System.Diagnostics.Debug.WriteLine("UPDATE RUNNING");
+
             var ks = Keyboard.GetState();
 
             // Player spawn keys
-            if (ks.IsKeyDown(Keys.D1)) unitManager.SpawnPlayerSoldier();
-            if (ks.IsKeyDown(Keys.D2)) unitManager.SpawnPlayerMachineGunner();
-            if (ks.IsKeyDown(Keys.D3)) unitManager.SpawnPlayerTank();
+            if (ks.IsKeyDown(Keys.D1) && previousKeyboardState.IsKeyUp(Keys.D1))
+                unitManager.SpawnPlayerSoldier();
+
+            if (ks.IsKeyDown(Keys.D2) && previousKeyboardState.IsKeyUp(Keys.D2))
+                unitManager.SpawnPlayerMachineGunner();
+
+            if (ks.IsKeyDown(Keys.D3) && previousKeyboardState.IsKeyUp(Keys.D3))
+                unitManager.SpawnPlayerTank();
 
             // Update managers
             unitManager.Update(gameTime);
@@ -189,6 +198,9 @@ namespace Coursework.States
             {
                 Game.ChangeState(new MenuState(Game, GraphicsDevice, Content));
             }
+
+            previousKeyboardState = ks;
+
         }
 
         public override void Draw(GameTime gameTime, SpriteBatch spriteBatch)

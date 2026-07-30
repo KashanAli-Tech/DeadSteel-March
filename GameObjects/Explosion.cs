@@ -56,7 +56,7 @@ namespace Coursework.GameObjects
             if (currentFrame < 0 || currentFrame >= 20)
                 return;
 
-            Rectangle sourceRect = new Rectangle(frame * frameWidth, 0, frameWidth, frameHeight);
+                Rectangle sourceRect = new Rectangle(currentFrame * frameWidth, 0, frameWidth, frameHeight);
 
                 spriteBatch.Draw(texture, Position, sourceRect, Color.White, 0f, new Vector2(frameWidth / 2f, frameHeight / 2f), 1f, SpriteEffects.None, 0f);
             

@@ -127,10 +127,13 @@ namespace Coursework.Managers
             foreach (var t in EnemyTanks) t.Update(new Vector2(PlayerTowerV.X, t.Position.Y), gameTime);
             foreach (var m in EnemyMachineGunners) m.Update(new Vector2(PlayerTowerV.X, m.Position.Y), gameTime);
 
-            if (playerTower.IsDead && enemyTower.IsDead)
+            if (playerTower.IsDead || enemyTower.IsDead)
                 return;
+
             // When units reach tower X, they should shoot (spawn shells) and/or attack
             HandleTowerEngagements(gameTime);
+
+
 
             // Cleanup dead units
             PlayerSoldiers.RemoveAll(u => u.Health <= 0);
@@ -147,34 +150,58 @@ namespace Coursework.Managers
             foreach (var s in PlayerSoldiers)
             {
                 if (Math.Abs(s.Position.X - EnemyTowerV.X) < 8f)
-                    FireAtTower(s, EnemyTowerV);
+                    if (s.attackTimer <= 0)
+                    {
+                        FireAtTower(s, EnemyTowerV);
+                        s.attackTimer = s.attackCooldown;
+                    }
             }
             foreach (var t in PlayerTanks)
             {
                 if (Math.Abs(t.Position.X - EnemyTowerV.X) < 8f)
-                    FireAtTower(t, EnemyTowerV);
+                    if (t.attackTimer <= 0)
+                    {
+                        FireAtTower(t, EnemyTowerV);
+                        t.attackTimer = t.attackCooldown;
+                    }
             }
             foreach (var m in PlayerMachineGunners)
             {
                 if (Math.Abs(m.Position.X - EnemyTowerV.X) < 8f)
-                    FireAtTower(m, EnemyTowerV);
+                    if (m.attackTimer <= 0)
+                    {
+                        FireAtTower(m, EnemyTowerV);
+                        m.attackTimer = m.attackCooldown;
+                    }
             }
 
             // Enemy units at player tower X
             foreach (var s in EnemySoldiers)
             {
                 if (Math.Abs(s.Position.X - PlayerTowerV.X) < 8f)
-                    FireAtTower(s, PlayerTowerV);
+                    if (s.attackTimer <= 0)
+                    {
+                        FireAtTower(s, PlayerTowerV);
+                        s.attackTimer = s.attackCooldown;
+                    }
             }
             foreach (var t in EnemyTanks)
             {
                 if (Math.Abs(t.Position.X - PlayerTowerV.X) < 8f)
-                    FireAtTower(t, PlayerTowerV);
+                    if (t.attackTimer <= 0)
+                    {
+                        FireAtTower(t, PlayerTowerV);
+                        t.attackTimer = t.attackCooldown;
+                    }
             }
             foreach (var m in EnemyMachineGunners)
             {
                 if (Math.Abs(m.Position.X - PlayerTowerV.X) < 8f)
-                    FireAtTower(m, PlayerTowerV);
+                    if (m.attackTimer <= 0)
+                    {
+                        FireAtTower(m, PlayerTowerV);
+                        m.attackTimer = m.attackCooldown;
+                    }
             }
         }
 
