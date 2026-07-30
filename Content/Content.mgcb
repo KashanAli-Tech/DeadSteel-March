@@ -116,11 +116,11 @@
 /processorParam:TextureFormat=Color
 /build:ExplosionFinal.png
 
-#begin GameBackgroundMusic.wav
-/importer:WavImporter
+#begin GameBackgroundMusic.wma
+/importer:WmaImporter
 /processor:SongProcessor
 /processorParam:Quality=Best
-/build:GameBackgroundMusic.wav
+/build:GameBackgroundMusic.wma
 
 #begin GameOverBackground.png
 /importer:TextureImporter
@@ -170,11 +170,11 @@
 /processorParam:TextureFormat=Color
 /build:MenuBackground.png
 
-#begin MenuBackgroundMusic.wav
-/importer:WavImporter
+#begin MenuBackgroundMusic.wma
+/importer:WmaImporter
 /processor:SongProcessor
 /processorParam:Quality=Best
-/build:MenuBackgroundMusic.wav
+/build:MenuBackgroundMusic.wma
 
 #begin MoneyIcon.png
 /importer:TextureImporter
@@ -248,11 +248,11 @@
 /processorParam:TextureFormat=Color
 /build:ShellPic1.png
 
-#begin shoot.wma
-/importer:WmaImporter
+#begin shoot.wav
+/importer:WavImporter
 /processor:SoundEffectProcessor
 /processorParam:Quality=Best
-/build:shoot.wma
+/build:shoot.wav
 
 #begin UpgradeIcon.png
 /importer:TextureImporter

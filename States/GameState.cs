@@ -73,7 +73,6 @@ namespace Coursework.States
         public override void LoadContent()
         {
             // LOAD VISUALS
-            // Texture for the background - battlefield themed
             background = Content.Load<Texture2D>("Background");
             gameOverBackground = Content.Load<Texture2D>("GameOverBackground");
 
@@ -134,6 +133,7 @@ namespace Coursework.States
             // CREATE TOWERS
             Tower1[0] = new Tower(tower1Texture, new Rectangle(20, 250, 300, 400), 20, 250, 300, 400);
             Tower2[0] = new Tower(tower2Texture, new Rectangle(1600, 250, 300, 400), 1600, 250, 300, 400);
+            unitManager.SetTowers(Tower1[0], Tower2[0]);
 
             collisionManager.PlayerTower = Tower1[0];
             collisionManager.EnemyTower = Tower2[0];
@@ -181,8 +181,8 @@ namespace Coursework.States
 
 
             //Player health bar rectangles
-            Tower1HealthRectangle = new Rectangle(Tower1[0].TowerX, Tower1[0].TowerY - 20, (Tower1[0].TowerHealth)/ 7, 30);
-            Tower2HealthRectangle = new Rectangle(Tower2[0].TowerX, Tower2[0].TowerY - 20, (Tower2[0].TowerHealth)/ 7, 30);
+            Tower1HealthRectangle = new Rectangle(Tower1[0].TowerX, Tower1[0].TowerY - 20, (Tower1[0].TowerHealth)/ 5, 30);
+            Tower2HealthRectangle = new Rectangle(Tower2[0].TowerX, Tower2[0].TowerY - 20, (Tower2[0].TowerHealth)/ 5, 30);
 
             // Return to menu
             if (ks.IsKeyDown(Keys.M))
@@ -193,7 +193,7 @@ namespace Coursework.States
 
         public override void Draw(GameTime gameTime, SpriteBatch spriteBatch)
         {
-            // Drawing Background using the texture loaded
+            // Background
             spriteBatch.Draw(background, Vector2.Zero, Color.White);
 
             // Towers
@@ -213,8 +213,8 @@ namespace Coursework.States
             uiManager.DrawHealthBar(spriteBatch, Tower2HealthRectangle, Tower2[0].TowerHealth, 1000);
 
             // Tower health bars
-            uiManager.DrawTowerHealth(spriteBatch, Tower1[0], new Vector2(Tower1[0].TowerX, Tower1[0].TowerY - 20));
-            uiManager.DrawTowerHealth(spriteBatch, Tower2[0], new Vector2(Tower2[0].TowerX, Tower2[0].TowerY - 20));
+            uiManager.DrawTowerHealth(spriteBatch, Tower1[0], new Vector2(Tower1[0].TowerX + 43, Tower1[0].TowerY - 20));
+            uiManager.DrawTowerHealth(spriteBatch, Tower2[0], new Vector2(Tower2[0].TowerX + 40, Tower2[0].TowerY - 20));
 
             
         }

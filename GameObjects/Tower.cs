@@ -19,6 +19,8 @@ namespace Coursework.GameObjects
             TowerHealth = 1000;
         }
 
+        public bool IsDead { get; private set; }
+
         public Rectangle Rectangle
         {
             get { return new Rectangle(TowerX, TowerY, TowerWidth, TowerHeight); }
@@ -36,7 +38,16 @@ namespace Coursework.GameObjects
 
         public void TakeDamage(int amount)
         {
+            if (IsDead)
+                return;
+
             TowerHealth -= amount;
+
+            if (TowerHealth <= 0)
+            {
+                TowerHealth = 0;
+                IsDead = true;
+            }
         }
 
 

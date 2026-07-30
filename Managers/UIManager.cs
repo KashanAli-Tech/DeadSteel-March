@@ -36,7 +36,7 @@ namespace Coursework.Managers
         {
             float pct = MathHelper.Clamp((float)current / max, 0f, 1f);
             spriteBatch.Draw(white, new Rectangle(rect.X, rect.Y, rect.Width, rect.Height), Color.DarkGray);
-            spriteBatch.Draw(white, new Rectangle(rect.X, rect.Y, (int)(rect.Width * pct), rect.Height), Color.LimeGreen);
+            spriteBatch.Draw(white, new Rectangle(rect.X, rect.Y, (int)(rect.Width * pct), rect.Height), Color.Red);
         }
     }
 }

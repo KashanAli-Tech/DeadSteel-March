@@ -14,6 +14,9 @@ namespace Coursework.GameObjects
         public float Scale;
         public bool JustSpawned = true;
 
+        public float attackTimer = 0f;
+        public float attackCooldown = 1f;
+
         public BaseUnit(Texture2D texture, int health, float speed, int damage, Vector2 position, float scale = 1f)
         {
             this.texture = texture;

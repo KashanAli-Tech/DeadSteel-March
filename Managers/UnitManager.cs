@@ -6,6 +6,7 @@ using Microsoft.Xna.Framework.Graphics;
 using System;
 using System.Collections.Generic;
 
+
 namespace Coursework.Managers
 {
     internal class UnitManager
@@ -47,6 +48,9 @@ namespace Coursework.Managers
         public ExplosionManager ExplosionManager;
         public SoundManager SoundManager;
         public MoneyManager MoneyManager;
+
+        private Tower playerTower;
+        private Tower enemyTower;
 
         public UnitManager()
         {
@@ -102,6 +106,12 @@ namespace Coursework.Managers
             PlayerMachineGunners.Add(new MachineGunner(PlayermachineGunTexture, new Vector2(120, y)));
         }
 
+        public void SetTowers(Tower player, Tower enemy)
+        {
+            playerTower = player;
+            enemyTower = enemy;
+        }
+
         public void Update(GameTime gameTime)
         {
             // spawn logic
@@ -117,6 +127,8 @@ namespace Coursework.Managers
             foreach (var t in EnemyTanks) t.Update(new Vector2(PlayerTowerV.X, t.Position.Y), gameTime);
             foreach (var m in EnemyMachineGunners) m.Update(new Vector2(PlayerTowerV.X, m.Position.Y), gameTime);
 
+            if (playerTower.IsDead && enemyTower.IsDead)
+                return;
             // When units reach tower X, they should shoot (spawn shells) and/or attack
             HandleTowerEngagements(gameTime);
 
@@ -168,14 +180,25 @@ namespace Coursework.Managers
 
         private void FireAtTower(BaseUnit unit, Vector2 towerCenter)
         {
+            if (ShellManager == null)
+                return;
+
+            if (unit.Health <= 0)
+                return;
+
+            if (towerCenter == EnemyTowerV && enemyTower.IsDead)
+                return;
+
+            if (towerCenter == PlayerTowerV && playerTower.IsDead)
+                return;
+
             // spawn a shell from unit toward tower center
-            if (ShellManager != null && unit.Health > 0)
-            {
+            
                 var shellTex = ShellManager.ShellTexture;
                 var shell = new Shell(shellTex, unit.Position + new Vector2(16, 16), towerCenter, unit.Damage, 900f);
                 ShellManager.AddShell(shell);
                 SoundManager?.PlayShoot();
-            }
+            
         }
 
         public void Draw(SpriteBatch spriteBatch)

@@ -85,18 +85,15 @@ namespace Coursework.States
             // Draw the  Play Button
             spriteBatch.Draw(buttonTexture, playButtonRect, Color.White);
             spriteBatch.DrawString(menuFont, "PLAY",
-                new Vector2(playButtonRect.X + 200, playButtonRect.Y + 35), 
+                new Vector2(playButtonRect.X + 200, playButtonRect.Y + 35),
                 Color.Black);
             // Changed the X coordinate addition from 180 to 200
-
 
             // Draw the Quit Button
             spriteBatch.Draw(buttonTexture, quitButtonRect, Color.White);
             spriteBatch.DrawString(menuFont, "QUIT",
                 new Vector2(quitButtonRect.X + 200, quitButtonRect.Y + 35),
                 Color.Black);
-            // Changed the X coordinate addition from 180 to 200
-
         }
     }
 }
