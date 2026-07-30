@@ -163,7 +163,6 @@ namespace Coursework.States
 
         public override void Update(GameTime gameTime)
         {
-            System.Diagnostics.Debug.WriteLine("UPDATE RUNNING");
 
             var ks = Keyboard.GetState();
 

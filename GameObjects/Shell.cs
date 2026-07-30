@@ -11,13 +11,16 @@ namespace Coursework.GameObjects
         public float Speed;
         private Texture2D texture;
         public bool IsAlive = true;
+        public bool IsPlayerShell;
 
-        public Shell(Texture2D texture, Vector2 start, Vector2 target, int damage = 20, float speed = 800f)
+        public Shell(Texture2D texture, Vector2 start, Vector2 target, bool isPlayerShell, int damage = 20, float speed = 800f)
         {
             this.texture = texture;
             Position = start;
             Damage = damage;
             Speed = speed;
+            IsPlayerShell = isPlayerShell;
+
             Vector2 dir = target - start;
             if (dir == Vector2.Zero) dir = new Vector2(1, 0);
             dir.Normalize();
@@ -37,7 +40,7 @@ namespace Coursework.GameObjects
         public void Draw(SpriteBatch spriteBatch)
         {
             if (texture != null)
-                spriteBatch.Draw(texture, Position, null, Color.White, 0f, new Vector2(texture.Width / 2f, texture.Height / 2f), 1f, SpriteEffects.None, 0f);
+                spriteBatch.Draw(texture, Position, null, Color.White, 0f, new Vector2(texture.Width / 2f, texture.Height / 2f), 0.1f, SpriteEffects.None, 0f);
         }
 
         public Rectangle Rectangle
@@ -45,7 +48,7 @@ namespace Coursework.GameObjects
             get
             {
                 if (texture == null) return Rectangle.Empty;
-                return new Rectangle((int)Position.X - texture.Width / 2, (int)Position.Y - texture.Height / 2, texture.Width, texture.Height);
+                return new Rectangle((int)Position.X - 5, (int)Position.Y - 5, 10, 10);
             }
         }
     }

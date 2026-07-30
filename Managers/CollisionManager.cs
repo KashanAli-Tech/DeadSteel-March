@@ -25,86 +25,148 @@ namespace Coursework.Managers
 
         public void Update(GameTime gameTime)
         {
-            // Shell collisions
             for (int i = ShellManager.Shells.Count - 1; i >= 0; i--)
             {
                 var shell = ShellManager.Shells[i];
 
-                // Check against enemy units and towers
                 bool hit = false;
 
-                // Player shells hitting enemy units
-                foreach (var u in UnitManager.EnemySoldiers)
+                // PLAYER SHELLS
+                if (shell.IsPlayerShell)
                 {
-                    if (shell.Rectangle.Intersects(u.Rectangle))
+                    foreach (var u in UnitManager.EnemySoldiers)
                     {
-                        u.Health -= shell.Damage;
-                        ExplosionManager.AddExplosion(shell.Position, shell.Damage, 30f);
-                        shell.IsAlive = false;
-                        MoneyManager?.AddMoney(10); // reward attacker? adjust logic as needed
-                        SoundManager?.PlayExplosion();
+                        if (shell.Rectangle.Intersects(u.Rectangle))
+                        {
+                            u.Health -= shell.Damage;
+                            hit = true;
+                            break;
+                        }
+                    }
+
+                    foreach (var u in UnitManager.EnemyTanks)
+                    {
+                        if (!hit && shell.Rectangle.Intersects(u.Rectangle))
+                        {
+                            u.Health -= shell.Damage;
+                            hit = true;
+                            break;
+                        }
+                    }
+
+                    foreach (var u in UnitManager.EnemyMachineGunners)
+                    {
+                        if (!hit && shell.Rectangle.Intersects(u.Rectangle))
+                        {
+                            u.Health -= shell.Damage;
+                            hit = true;
+                            break;
+                        }
+                    }
+
+                    if (!hit && EnemyTower != null && shell.Rectangle.Intersects(EnemyTower.Rectangle))
+                    {
+                        EnemyTower.TakeDamage(shell.Damage);
                         hit = true;
-                        break;
                     }
                 }
-                if (hit) { ShellManager.Shells.RemoveAt(i); continue; }
 
-                // Player shells hitting enemy tower
-                if (EnemyTower != null && shell.Rectangle.Intersects(EnemyTower.Rectangle))
-                {
-                    EnemyTower.TakeDamage(shell.Damage);
-                    ExplosionManager.AddExplosion(shell.Position, shell.Damage, 40f);
-                    shell.IsAlive = false;
-                    SoundManager?.PlayExplosion();
-                    ShellManager.Shells.RemoveAt(i);
-                    continue;
-                }
 
-                // Enemy shells hitting player units
-                foreach (var u in UnitManager.PlayerSoldiers)
+                // ENEMY SHELLS
+                else
                 {
-                    if (shell.Rectangle.Intersects(u.Rectangle))
+                    foreach (var u in UnitManager.PlayerSoldiers)
                     {
-                        u.Health -= shell.Damage;
-                        ExplosionManager.AddExplosion(shell.Position, shell.Damage, 30f);
-                        shell.IsAlive = false;
-                        SoundManager?.PlayExplosion();
+                        if (shell.Rectangle.Intersects(u.Rectangle))
+                        {
+                            u.Health -= shell.Damage;
+                            hit = true;
+                            break;
+                        }
+                    }
+
+                    foreach (var u in UnitManager.PlayerTanks)
+                    {
+                        if (!hit && shell.Rectangle.Intersects(u.Rectangle))
+                        {
+                            u.Health -= shell.Damage;
+                            hit = true;
+                            break;
+                        }
+                    }
+
+                    foreach (var u in UnitManager.PlayerMachineGunners)
+                    {
+                        if (!hit && shell.Rectangle.Intersects(u.Rectangle))
+                        {
+                            u.Health -= shell.Damage;
+                            hit = true;
+                            break;
+                        }
+                    }
+
+                    if (!hit && PlayerTower != null && shell.Rectangle.Intersects(PlayerTower.Rectangle))
+                    {
+                        PlayerTower.TakeDamage(shell.Damage);
                         hit = true;
-                        break;
                     }
                 }
-                if (hit) { ShellManager.Shells.RemoveAt(i); continue; }
 
-                // Enemy shells hitting player tower
-                if (PlayerTower != null && shell.Rectangle.Intersects(PlayerTower.Rectangle))
+
+                if (hit)
                 {
-                    PlayerTower.TakeDamage(shell.Damage);
-                    ExplosionManager.AddExplosion(shell.Position, shell.Damage, 40f);
-                    shell.IsAlive = false;
+                    ExplosionManager.AddExplosion(shell.Position, shell.Damage, 30f);
                     SoundManager?.PlayExplosion();
+
+                    if (shell.IsPlayerShell)
+                        MoneyManager?.AddMoney(10);
+
                     ShellManager.Shells.RemoveAt(i);
-                    continue;
                 }
             }
 
-            // Explosion area damage (simple)
+
+            // Explosion damage
             for (int e = ExplosionManager.Explosions.Count - 1; e >= 0; e--)
             {
                 var ex = ExplosionManager.Explosions[e];
-                // damage enemy units in radius
+
+
                 foreach (var u in UnitManager.EnemySoldiers)
                 {
                     if (ex.Bounds.Intersects(u.Rectangle))
-                    {
                         u.Health -= ex.Damage;
-                    }
                 }
+
+                foreach (var u in UnitManager.EnemyTanks)
+                {
+                    if (ex.Bounds.Intersects(u.Rectangle))
+                        u.Health -= ex.Damage;
+                }
+
+                foreach (var u in UnitManager.EnemyMachineGunners)
+                {
+                    if (ex.Bounds.Intersects(u.Rectangle))
+                        u.Health -= ex.Damage;
+                }
+
+
                 foreach (var u in UnitManager.PlayerSoldiers)
                 {
                     if (ex.Bounds.Intersects(u.Rectangle))
-                    {
                         u.Health -= ex.Damage;
-                    }
+                }
+
+                foreach (var u in UnitManager.PlayerTanks)
+                {
+                    if (ex.Bounds.Intersects(u.Rectangle))
+                        u.Health -= ex.Damage;
+                }
+
+                foreach (var u in UnitManager.PlayerMachineGunners)
+                {
+                    if (ex.Bounds.Intersects(u.Rectangle))
+                        u.Health -= ex.Damage;
                 }
             }
         }

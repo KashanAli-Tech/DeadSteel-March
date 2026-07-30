@@ -149,16 +149,16 @@ namespace Coursework.Managers
             // Player units at enemy tower X
             foreach (var s in PlayerSoldiers)
             {
-                if (Math.Abs(s.Position.X - EnemyTowerV.X) < 8f)
+                if (Math.Abs(s.Position.X - EnemyTowerV.X) < 150f)
                     if (s.attackTimer <= 0)
                     {
                         FireAtTower(s, EnemyTowerV);
                         s.attackTimer = s.attackCooldown;
-                    }
+                    } 
             }
             foreach (var t in PlayerTanks)
             {
-                if (Math.Abs(t.Position.X - EnemyTowerV.X) < 8f)
+                if (Math.Abs(t.Position.X - EnemyTowerV.X) < 150f)
                     if (t.attackTimer <= 0)
                     {
                         FireAtTower(t, EnemyTowerV);
@@ -167,18 +167,18 @@ namespace Coursework.Managers
             }
             foreach (var m in PlayerMachineGunners)
             {
-                if (Math.Abs(m.Position.X - EnemyTowerV.X) < 8f)
+                if (Math.Abs(m.Position.X - EnemyTowerV.X) < 150f)
                     if (m.attackTimer <= 0)
                     {
                         FireAtTower(m, EnemyTowerV);
                         m.attackTimer = m.attackCooldown;
-                    }
+                    }   
             }
 
             // Enemy units at player tower X
             foreach (var s in EnemySoldiers)
             {
-                if (Math.Abs(s.Position.X - PlayerTowerV.X) < 8f)
+                if (Math.Abs(s.Position.X - PlayerTowerV.X) < 150f)
                     if (s.attackTimer <= 0)
                     {
                         FireAtTower(s, PlayerTowerV);
@@ -187,7 +187,7 @@ namespace Coursework.Managers
             }
             foreach (var t in EnemyTanks)
             {
-                if (Math.Abs(t.Position.X - PlayerTowerV.X) < 8f)
+                if (Math.Abs(t.Position.X - PlayerTowerV.X) < 150f)
                     if (t.attackTimer <= 0)
                     {
                         FireAtTower(t, PlayerTowerV);
@@ -196,7 +196,7 @@ namespace Coursework.Managers
             }
             foreach (var m in EnemyMachineGunners)
             {
-                if (Math.Abs(m.Position.X - PlayerTowerV.X) < 8f)
+                if (Math.Abs(m.Position.X - PlayerTowerV.X) < 150f)
                     if (m.attackTimer <= 0)
                     {
                         FireAtTower(m, PlayerTowerV);
@@ -222,7 +222,8 @@ namespace Coursework.Managers
             // spawn a shell from unit toward tower center
             
                 var shellTex = ShellManager.ShellTexture;
-                var shell = new Shell(shellTex, unit.Position + new Vector2(16, 16), towerCenter, unit.Damage, 900f);
+                bool isPlayer = unit is Soldier && PlayerSoldiers.Contains((Soldier)unit) || unit is Tank && PlayerTanks.Contains((Tank)unit) || unit is MachineGunner && PlayerMachineGunners.Contains((MachineGunner)unit);
+                var shell = new Shell(shellTex, unit.Position + new Vector2(16, 16), towerCenter, isPlayer, unit.Damage, 900f);
                 ShellManager.AddShell(shell);
                 SoundManager?.PlayShoot();
             
