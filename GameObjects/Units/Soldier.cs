@@ -8,11 +8,13 @@ namespace Coursework.GameObjects.Units
     internal class Soldier : BaseUnit
     {
         public Soldier(Texture2D texture, Vector2 position)
-            : base(texture, 100, 2f, 10, position, 1f)
+            : base(texture, 100, 2f, 10, position, 1f, 70f, 1f)
         {
         }
 
-        public void Update(Vector2 targetPosition, GameTime gameTime)
+        public override bool FiresShells => true;
+
+        public override void Update(Vector2 targetPosition, GameTime gameTime)
         {
             base.Update(targetPosition, gameTime);
         }

@@ -8,11 +8,13 @@ namespace Coursework.GameObjects.Units
     internal class MachineGunner : BaseUnit
     {
         public MachineGunner(Texture2D texture, Vector2 position)
-            : base(texture, 120, 1.8f, 15, position, 1f)
+            : base(texture, 120, 1.8f, 15, position, 1f, 180f, 0.35f)
         {
         }
 
-        public void Update(Vector2 targetPosition, GameTime gameTime)
+        public override bool FiresShells => true;
+
+        public override void Update(Vector2 targetPosition, GameTime gameTime)
         {
             base.Update(targetPosition, gameTime);
         }

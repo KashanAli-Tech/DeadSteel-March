@@ -7,6 +7,7 @@ namespace Coursework.GameObjects
     {
         public int TowerX, TowerY, TowerWidth, TowerHeight;
         public int TowerHealth;
+        public int MaxTowerHealth { get; private set; }
         public Texture2D texture;
 
         public Tower(Texture2D newTexture, Rectangle rectangle, int intX, int intY, int width, int height)
@@ -16,20 +17,18 @@ namespace Coursework.GameObjects
             TowerY = intY;
             TowerWidth = width;
             TowerHeight = height;
-            TowerHealth = 1000;
+            MaxTowerHealth = 1000;
+            TowerHealth = MaxTowerHealth;
         }
 
         public bool IsDead { get; private set; }
 
-        public Rectangle Rectangle
-        {
-            get { return new Rectangle(TowerX, TowerY, TowerWidth, TowerHeight); }
-        }
+        public Rectangle Rectangle => new Rectangle(TowerX, TowerY, TowerWidth, TowerHeight);
 
-        public Vector2 Center
-        {
-            get { return new Vector2(TowerX + TowerWidth / 2f, TowerY + TowerHeight / 2f); }
-        }
+        public Vector2 Center => new Vector2(TowerX + TowerWidth / 2f, TowerY + TowerHeight / 2f);
+
+        // Handy for a HealthBar UI element (0f..1f).
+        public float HealthPercentage => MaxTowerHealth <= 0 ? 0f : (float)TowerHealth / MaxTowerHealth;
 
         internal void Draw(SpriteBatch spriteBatch)
         {
@@ -50,12 +49,10 @@ namespace Coursework.GameObjects
             }
         }
 
-
-        // not in use as of now
         public void Repair(int amount)
         {
             if (amount >= 1 && amount <= 100)
-                TowerHealth += amount;
+                TowerHealth = System.Math.Min(MaxTowerHealth, TowerHealth + amount);
         }
     }
 }

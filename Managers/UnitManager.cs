@@ -6,16 +6,15 @@ using Microsoft.Xna.Framework.Graphics;
 using System;
 using System.Collections.Generic;
 
-
 namespace Coursework.Managers
 {
+    /// <summary>
+    /// Owns every unit in the game: spawning, movement toward the opposing tower, tower attacks, and cleanup.
+    /// Units never fight each other. Player click-damage and AI damage to units live in UnitKillManager.
+    /// </summary>
     internal class UnitManager
     {
-
-        // MAKE THE CODE NEAT AND TIDY WHEN FREE 
-        // ORGANISE ATTRIBUTES AND FUNCTIONS ETC.
-        
-        // declaring lists
+        // ---- Unit lists ----
         public List<Soldier> PlayerSoldiers = new List<Soldier>();
         public List<Soldier> EnemySoldiers = new List<Soldier>();
         public List<Tank> PlayerTanks = new List<Tank>();
@@ -23,25 +22,31 @@ namespace Coursework.Managers
         public List<MachineGunner> PlayerMachineGunners = new List<MachineGunner>();
         public List<MachineGunner> EnemyMachineGunners = new List<MachineGunner>();
 
-        // declaring textures
-        private Texture2D PlayersoldierTexture;
-        private Texture2D PlayertankTexture;
-        private Texture2D PlayermachineGunTexture;
-        private Texture2D EnemysoldierTexture;
-        private Texture2D EnemytankTexture;
-        private Texture2D EnemymachineGunTexture;
+        // ---- Textures ----
+        private Texture2D playerSoldierTexture;
+        private Texture2D playerTankTexture;
+        private Texture2D playerMachineGunTexture;
+        private Texture2D enemySoldierTexture;
+        private Texture2D enemyTankTexture;
+        private Texture2D enemyMachineGunTexture;
 
-        // idk what this is but it was in tutorial
-        public Texture2D PlayerSoldierTexture => PlayersoldierTexture;
-        public Texture2D EnemySoldierTexture => EnemysoldierTexture;
+        public Texture2D PlayerSoldierTexture => playerSoldierTexture;
+        public Texture2D EnemySoldierTexture => enemySoldierTexture;
+        public Texture2D PlayerTankTexture => playerTankTexture;
+        public Texture2D EnemyTankTexture => enemyTankTexture;
+        public Texture2D PlayerMachineGunTexture => playerMachineGunTexture;
+        public Texture2D EnemyMachineGunTexture => enemyMachineGunTexture;
 
-        public Texture2D PlayerTankTexture => PlayertankTexture;
-        public Texture2D EnemyTankTexture => EnemytankTexture;
-        public Texture2D PlayerMachineGunTexture => PlayermachineGunTexture;
-        public Texture2D EnemyMachineGunTexture => EnemymachineGunTexture;
+        // ---- Difficulty ----
+        // EnemyAIManager decides WHEN to spawn/kill units; this controls HOW STRONG those units are
+        // once they exist. 1f = same stats as an equivalent player unit. Tune freely.
+        public float EnemyDifficultyScale = 0.75f;
 
-        private Vector2 PlayerTowerV, EnemyTowerV;
-        private Random rand = new Random();
+        public Vector2 PlayerTowerV;
+        public Vector2 EnemyTowerV;
+        private readonly Random rand = new Random();
+        private const float SpawnClearance = 24f;
+        private const int SpawnFootprint = 56;
 
         // External managers
         public ShellManager ShellManager;
@@ -54,8 +59,8 @@ namespace Coursework.Managers
 
         public UnitManager()
         {
-            PlayerTowerV = new Vector2(25, 450);
-            EnemyTowerV = new Vector2(1675, 450);
+            PlayerTowerV = new Vector2(20, 250);
+            EnemyTowerV = new Vector2(1600, 250);
         }
 
         public void SetTowerPositions(Vector2 left, Vector2 right)
@@ -64,170 +69,309 @@ namespace Coursework.Managers
             EnemyTowerV = right;
         }
 
-        public void LoadContent(ContentManager content)
-        {
-            PlayersoldierTexture = content.Load<Texture2D>("PlayerSoldier");
-            PlayertankTexture = content.Load<Texture2D>("PlayerTank");
-            PlayermachineGunTexture = content.Load<Texture2D>("PlayerMachineGunner");
-
-            EnemysoldierTexture = content.Load<Texture2D>("EnemySoldier");
-            EnemytankTexture = content.Load<Texture2D>("EnemyTank");
-            EnemymachineGunTexture = content.Load<Texture2D>("EnemyMachineGunner");
-
-        }
-
-        private void SpawnEnemyWave()
-        {
-            int chance = rand.Next(0, 100);
-            int x = rand.Next(600, 2000);
-            int y = rand.Next(50, 1325);
-            Vector2 pos = new Vector2(x, y);
-
-            if (chance < 2) EnemySoldiers.Add(new Soldier(EnemysoldierTexture, pos));
-            else if (chance < 4) EnemyMachineGunners.Add(new MachineGunner(EnemymachineGunTexture, pos));
-            else if (chance < 6) EnemyTanks.Add(new Tank(EnemytankTexture, pos));
-        }
-
-        public void SpawnPlayerSoldier()
-        {
-            int y = rand.Next(50, 1325);
-            PlayerSoldiers.Add(new Soldier(PlayersoldierTexture, new Vector2(120, y)));
-        }
-
-        public void SpawnPlayerTank()
-        {
-            int y = rand.Next(50, 1325);
-            PlayerTanks.Add(new Tank(PlayertankTexture, new Vector2(120, y)));
-        }
-
-        public void SpawnPlayerMachineGunner()
-        {
-            int y = rand.Next(50, 1325);
-            PlayerMachineGunners.Add(new MachineGunner(PlayermachineGunTexture, new Vector2(120, y)));
-        }
-
         public void SetTowers(Tower player, Tower enemy)
         {
             playerTower = player;
             enemyTower = enemy;
         }
 
+        public void LoadContent(ContentManager content)
+        {
+            playerSoldierTexture = content.Load<Texture2D>("PlayerSoldier");
+            playerTankTexture = content.Load<Texture2D>("PlayerTank");
+            playerMachineGunTexture = content.Load<Texture2D>("PlayerMachineGunner");
+
+            enemySoldierTexture = content.Load<Texture2D>("EnemySoldier");
+            enemyTankTexture = content.Load<Texture2D>("EnemyTank");
+            enemyMachineGunTexture = content.Load<Texture2D>("EnemyMachineGunner");
+        }
+
+        // ---------------- Spawning ----------------
+
+        public void SpawnPlayerSoldier()
+        {
+            var unit = new Soldier(playerSoldierTexture, PlayerSpawnPosition());
+            unit.IsPlayer = true;
+            PlayerSoldiers.Add(unit);
+        }
+
+        public void SpawnPlayerTank()
+        {
+            var unit = new Tank(playerTankTexture, PlayerSpawnPosition());
+            unit.IsPlayer = true;
+            PlayerTanks.Add(unit);
+        }
+
+        public void SpawnPlayerMachineGunner()
+        {
+            var unit = new MachineGunner(playerMachineGunTexture, PlayerSpawnPosition());
+            unit.IsPlayer = true;
+            PlayerMachineGunners.Add(unit);
+        }
+
+        // Call these from EnemyAIManager - it decides *when* to spawn, this just creates the unit
+        // (at the correct difficulty) and adds it to the right list.
+        public void SpawnEnemySoldier()
+        {
+            var unit = new Soldier(enemySoldierTexture, EnemySpawnPosition());
+            unit.IsPlayer = false;
+            ApplyDifficultyScale(unit);
+            EnemySoldiers.Add(unit);
+        }
+
+        public void SpawnEnemyTank()
+        {
+            var unit = new Tank(enemyTankTexture, EnemySpawnPosition());
+            unit.IsPlayer = false;
+            ApplyDifficultyScale(unit);
+            EnemyTanks.Add(unit);
+        }
+
+        public void SpawnEnemyMachineGunner()
+        {
+            var unit = new MachineGunner(enemyMachineGunTexture, EnemySpawnPosition());
+            unit.IsPlayer = false;
+            ApplyDifficultyScale(unit);
+            EnemyMachineGunners.Add(unit);
+        }
+
+        private Vector2 PlayerSpawnPosition()
+        {
+            float towerWidth = playerTower != null ? playerTower.TowerWidth : 300f;
+            float towerHeight = playerTower != null ? playerTower.TowerHeight : 400f;
+            float x = PlayerTowerV.X + towerWidth + SpawnClearance;
+            return FindFreeSpawnPosition(x, PlayerTowerV.Y, towerHeight);
+        }
+
+        private Vector2 EnemySpawnPosition()
+        {
+            float towerHeight = enemyTower != null ? enemyTower.TowerHeight : 400f;
+            float x = EnemyTowerV.X - SpawnClearance - SpawnFootprint;
+            return FindFreeSpawnPosition(x, EnemyTowerV.Y, towerHeight);
+        }
+
+        private Vector2 FindFreeSpawnPosition(float x, float towerY, float towerHeight)
+        {
+            int minY = (int)(towerY + 16f);
+            int maxY = (int)(towerY + Math.Max(towerHeight - SpawnFootprint - 16f, 32f));
+            if (maxY <= minY)
+                maxY = minY + 1;
+
+            for (int attempt = 0; attempt < 16; attempt++)
+            {
+                int y = rand.Next(minY, maxY);
+                var pos = new Vector2(x, y);
+                if (!SpawnWouldOverlap(pos))
+                    return pos;
+            }
+
+            int stackedY = minY + ((CountAliveUnits() * 40) % Math.Max(1, maxY - minY));
+            return new Vector2(x, stackedY);
+        }
+
+        private bool SpawnWouldOverlap(Vector2 pos)
+        {
+            var footprint = new Rectangle((int)pos.X, (int)pos.Y, SpawnFootprint, SpawnFootprint);
+
+            if (playerTower != null && footprint.Intersects(playerTower.Rectangle))
+                return true;
+            if (enemyTower != null && footprint.Intersects(enemyTower.Rectangle))
+                return true;
+
+            foreach (var unit in AllUnits())
+            {
+                if (unit.IsAlive && footprint.Intersects(unit.Rectangle))
+                    return true;
+            }
+
+            return false;
+        }
+
+        private int CountAliveUnits()
+        {
+            int count = 0;
+            foreach (var unit in AllUnits())
+            {
+                if (unit.IsAlive)
+                    count++;
+            }
+            return count;
+        }
+
+        public List<BaseUnit> GetAlivePlayerUnits()
+        {
+            var list = new List<BaseUnit>();
+            AddAlive(PlayerSoldiers, list);
+            AddAlive(PlayerTanks, list);
+            AddAlive(PlayerMachineGunners, list);
+            return list;
+        }
+
+        public List<BaseUnit> GetAliveEnemyUnits()
+        {
+            var list = new List<BaseUnit>();
+            AddAlive(EnemySoldiers, list);
+            AddAlive(EnemyTanks, list);
+            AddAlive(EnemyMachineGunners, list);
+            return list;
+        }
+
+        private IEnumerable<BaseUnit> AllUnits()
+        {
+            foreach (var u in PlayerSoldiers) yield return u;
+            foreach (var u in PlayerTanks) yield return u;
+            foreach (var u in PlayerMachineGunners) yield return u;
+            foreach (var u in EnemySoldiers) yield return u;
+            foreach (var u in EnemyTanks) yield return u;
+            foreach (var u in EnemyMachineGunners) yield return u;
+        }
+
+        private static void AddAlive<T>(List<T> source, List<BaseUnit> dest) where T : BaseUnit
+        {
+            foreach (var unit in source)
+            {
+                if (unit != null && unit.IsAlive)
+                    dest.Add(unit);
+            }
+        }
+
+        private void ApplyDifficultyScale(BaseUnit unit)
+        {
+            unit.Health = Math.Max(1, (int)(unit.Health * EnemyDifficultyScale));
+            unit.MaxHealth = unit.Health;
+            unit.Damage = Math.Max(1, (int)(unit.Damage * EnemyDifficultyScale));
+        }
+
+        // ---------------- Update ----------------
+
         public void Update(GameTime gameTime)
         {
-            // spawn logic
-            if (rand.NextDouble() < 0.02) SpawnEnemyWave();
+            MoveUnits(gameTime);
+            PreventWalkingThroughTowers();
 
-            // Player units move horizontally toward enemy tower, keep their Y
-            foreach (var s in PlayerSoldiers) s.Update(new Vector2(EnemyTowerV.X, s.Position.Y), gameTime);
-            foreach (var t in PlayerTanks) t.Update(new Vector2(EnemyTowerV.X, t.Position.Y), gameTime);
-            foreach (var m in PlayerMachineGunners) m.Update(new Vector2(EnemyTowerV.X, m.Position.Y), gameTime);
-
-            // Enemy units move horizontally toward player tower, keep their Y
-            foreach (var s in EnemySoldiers) s.Update(new Vector2(PlayerTowerV.X, s.Position.Y), gameTime);
-            foreach (var t in EnemyTanks) t.Update(new Vector2(PlayerTowerV.X, t.Position.Y), gameTime);
-            foreach (var m in EnemyMachineGunners) m.Update(new Vector2(PlayerTowerV.X, m.Position.Y), gameTime);
-
-            if (playerTower.IsDead || enemyTower.IsDead)
+            if (playerTower == null || enemyTower == null || playerTower.IsDead || enemyTower.IsDead)
+            {
+                CleanupDeadUnits();
                 return;
+            }
 
-            // When units reach tower X, they should shoot (spawn shells) and/or attack
-            HandleTowerEngagements(gameTime);
-
-
-
-            // Cleanup dead units
-            PlayerSoldiers.RemoveAll(u => u.Health <= 0);
-            EnemySoldiers.RemoveAll(u => u.Health <= 0);
-            PlayerTanks.RemoveAll(u => u.Health <= 0);
-            EnemyTanks.RemoveAll(u => u.Health <= 0);
-            PlayerMachineGunners.RemoveAll(u => u.Health <= 0);
-            EnemyMachineGunners.RemoveAll(u => u.Health <= 0);
+            HandleTowerEngagements();
+            CleanupDeadUnits();
         }
 
-        private void HandleTowerEngagements(GameTime gameTime)
+        private void MoveUnits(GameTime gameTime)
         {
-            // Player units at enemy tower X
-            foreach (var s in PlayerSoldiers)
-            {
-                if (Math.Abs(s.Position.X - EnemyTowerV.X) < 150f)
-                    if (s.attackTimer <= 0)
-                    {
-                        FireAtTower(s, EnemyTowerV);
-                        s.attackTimer = s.attackCooldown;
-                    } 
-            }
-            foreach (var t in PlayerTanks)
-            {
-                if (Math.Abs(t.Position.X - EnemyTowerV.X) < 150f)
-                    if (t.attackTimer <= 0)
-                    {
-                        FireAtTower(t, EnemyTowerV);
-                        t.attackTimer = t.attackCooldown;
-                    }
-            }
-            foreach (var m in PlayerMachineGunners)
-            {
-                if (Math.Abs(m.Position.X - EnemyTowerV.X) < 150f)
-                    if (m.attackTimer <= 0)
-                    {
-                        FireAtTower(m, EnemyTowerV);
-                        m.attackTimer = m.attackCooldown;
-                    }   
-            }
+            Vector2 enemyApproach = GetEnemyApproachPoint();
+            Vector2 playerApproach = GetPlayerApproachPoint();
 
-            // Enemy units at player tower X
-            foreach (var s in EnemySoldiers)
-            {
-                if (Math.Abs(s.Position.X - PlayerTowerV.X) < 150f)
-                    if (s.attackTimer <= 0)
-                    {
-                        FireAtTower(s, PlayerTowerV);
-                        s.attackTimer = s.attackCooldown;
-                    }
-            }
-            foreach (var t in EnemyTanks)
-            {
-                if (Math.Abs(t.Position.X - PlayerTowerV.X) < 150f)
-                    if (t.attackTimer <= 0)
-                    {
-                        FireAtTower(t, PlayerTowerV);
-                        t.attackTimer = t.attackCooldown;
-                    }
-            }
-            foreach (var m in EnemyMachineGunners)
-            {
-                if (Math.Abs(m.Position.X - PlayerTowerV.X) < 150f)
-                    if (m.attackTimer <= 0)
-                    {
-                        FireAtTower(m, PlayerTowerV);
-                        m.attackTimer = m.attackCooldown;
-                    }
-            }
+            foreach (var s in PlayerSoldiers) if (s != null && s.IsAlive) s.Update(new Vector2(enemyApproach.X, s.Position.Y), gameTime);
+            foreach (var t in PlayerTanks) if (t != null && t.IsAlive) t.Update(new Vector2(enemyApproach.X, t.Position.Y), gameTime);
+            foreach (var m in PlayerMachineGunners) if (m != null && m.IsAlive) m.Update(new Vector2(enemyApproach.X, m.Position.Y), gameTime);
+
+            foreach (var s in EnemySoldiers) if (s != null && s.IsAlive) s.Update(new Vector2(playerApproach.X, s.Position.Y), gameTime);
+            foreach (var t in EnemyTanks) if (t != null && t.IsAlive) t.Update(new Vector2(playerApproach.X, t.Position.Y), gameTime);
+            foreach (var m in EnemyMachineGunners) if (m != null && m.IsAlive) m.Update(new Vector2(playerApproach.X, m.Position.Y), gameTime);
         }
 
-        private void FireAtTower(BaseUnit unit, Vector2 towerCenter)
+        private Vector2 GetEnemyApproachPoint()
         {
-            if (ShellManager == null)
-                return;
-
-            if (unit.Health <= 0)
-                return;
-
-            if (towerCenter == EnemyTowerV && enemyTower.IsDead)
-                return;
-
-            if (towerCenter == PlayerTowerV && playerTower.IsDead)
-                return;
-
-            // spawn a shell from unit toward tower center
-            
-                var shellTex = ShellManager.ShellTexture;
-                bool isPlayer = unit is Soldier && PlayerSoldiers.Contains((Soldier)unit) || unit is Tank && PlayerTanks.Contains((Tank)unit) || unit is MachineGunner && PlayerMachineGunners.Contains((MachineGunner)unit);
-                var shell = new Shell(shellTex, unit.Position + new Vector2(16, 16), towerCenter, isPlayer, unit.Damage, 900f);
-                ShellManager.AddShell(shell);
-                SoundManager?.PlayShoot();
-            
+            if (enemyTower != null)
+                return new Vector2(enemyTower.TowerX, enemyTower.Center.Y);
+            return EnemyTowerV;
         }
+
+        private Vector2 GetPlayerApproachPoint()
+        {
+            if (playerTower != null)
+                return new Vector2(playerTower.TowerX + playerTower.TowerWidth, playerTower.Center.Y);
+            return PlayerTowerV;
+        }
+
+        private void PreventWalkingThroughTowers()
+        {
+            if (enemyTower != null)
+            {
+                foreach (var unit in GetAlivePlayerUnits())
+                {
+                    if (unit.Rectangle.Intersects(enemyTower.Rectangle))
+                        unit.Position.X = enemyTower.TowerX - 70;
+                }
+            }
+
+            if (playerTower != null)
+            {
+                foreach (var unit in GetAliveEnemyUnits())
+                {
+                    if (unit.Rectangle.Intersects(playerTower.Rectangle))
+                        unit.Position.X = playerTower.TowerX + playerTower.TowerWidth;
+                }
+            }
+        }
+
+        private void HandleTowerEngagements()
+        {
+            Vector2 enemyApproach = GetEnemyApproachPoint();
+            Vector2 playerApproach = GetPlayerApproachPoint();
+            Vector2 enemyAim = enemyTower != null ? enemyTower.Center : EnemyTowerV;
+            Vector2 playerAim = playerTower != null ? playerTower.Center : PlayerTowerV;
+
+            EngageTower(PlayerSoldiers, enemyApproach, enemyAim, enemyTower, isPlayer: true);
+            EngageTower(PlayerTanks, enemyApproach, enemyAim, enemyTower, isPlayer: true);
+            EngageTower(PlayerMachineGunners, enemyApproach, enemyAim, enemyTower, isPlayer: true);
+
+            EngageTower(EnemySoldiers, playerApproach, playerAim, playerTower, isPlayer: false);
+            EngageTower(EnemyTanks, playerApproach, playerAim, playerTower, isPlayer: false);
+            EngageTower(EnemyMachineGunners, playerApproach, playerAim, playerTower, isPlayer: false);
+        }
+
+        private void EngageTower<T>(List<T> units, Vector2 approachPoint, Vector2 aimPoint, Tower tower, bool isPlayer) where T : BaseUnit
+        {
+            if (tower == null || tower.IsDead)
+                return;
+
+            foreach (var unit in units)
+            {
+                if (unit == null || !unit.IsAlive)
+                    continue;
+
+                bool atTower = unit.IsInAttackRange(new Vector2(approachPoint.X, unit.Position.Y))
+                    || unit.Rectangle.Intersects(tower.Rectangle);
+                if (!atTower)
+                    continue;
+
+                if (unit.attackTimer > 0f)
+                    continue;
+
+                if (unit.FiresShells)
+                    FireShellAtTower(unit, aimPoint, isPlayer);
+                else
+                    tower.TakeDamage(unit.Damage);
+
+                unit.attackTimer = unit.AttackSpeed;
+            }
+        }
+
+        private void FireShellAtTower(BaseUnit unit, Vector2 towerTarget, bool isPlayer)
+        {
+            if (ShellManager == null || ShellManager.ShellTexture == null || unit == null)
+                return;
+
+            var shell = new Shell(ShellManager.ShellTexture, unit.Position, towerTarget, isPlayer, unit.Damage, 900f);
+            ShellManager.AddShell(shell);
+            SoundManager?.PlayShoot();
+        }
+
+        public void CleanupDeadUnits()
+        {
+            PlayerSoldiers.RemoveAll(u => u == null || u.Health <= 0);
+            EnemySoldiers.RemoveAll(u => u == null || u.Health <= 0);
+            PlayerTanks.RemoveAll(u => u == null || u.Health <= 0);
+            EnemyTanks.RemoveAll(u => u == null || u.Health <= 0);
+            PlayerMachineGunners.RemoveAll(u => u == null || u.Health <= 0);
+            EnemyMachineGunners.RemoveAll(u => u == null || u.Health <= 0);
+        }
+
+        // ---------------- Draw ----------------
 
         public void Draw(SpriteBatch spriteBatch)
         {

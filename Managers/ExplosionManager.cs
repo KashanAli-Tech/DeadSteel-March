@@ -8,23 +8,8 @@ namespace Coursework.Managers
 {
     internal class ExplosionManager
     {
-         
-        // THERE ARE SOME ERRORS IN THIS - Fix these by sepaqrating sprites from class team -worksheet 5 monogame
-        // I NEED TO FIX THEM AFTER FINISHING COURSEWORK DOCUMENTATION - MILESTONES
-
-
         public List<Explosion> Explosions = new List<Explosion>();
         private Texture2D explosionTexture;
-
-        float elapsed;
-        float delay = 200f;
-        int frames = 0;
-        Rectangle sourceRect;
-        Rectangle destRect;
-
-        Texture2D texture;
-        Vector2 ShellExploc;
-        public bool ExpDone;
 
         public void LoadContent(ContentManager content)
         {
@@ -41,7 +26,8 @@ namespace Coursework.Managers
             for (int i = Explosions.Count - 1; i >= 0; i--)
             {
                 Explosions[i].Update(gameTime);
-                if (Explosions[i].IsFinished) Explosions.RemoveAt(i);
+                if (Explosions[i].IsFinished)
+                    Explosions.RemoveAt(i);
             }
         }
 
@@ -49,6 +35,8 @@ namespace Coursework.Managers
         {
             foreach (var e in Explosions) e.Draw(spriteBatch);
         }
+    }
+}
 
         /*internal class ShellExplosion
         {
@@ -88,5 +76,5 @@ namespace Coursework.Managers
 
 
         }*/
-    }
-}
+
+

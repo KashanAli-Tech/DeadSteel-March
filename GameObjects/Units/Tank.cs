@@ -8,11 +8,13 @@ namespace Coursework.GameObjects.Units
     internal class Tank : BaseUnit
     {
         public Tank(Texture2D texture, Vector2 position)
-            : base(texture, 300, 1.2f, 40, position, 1.2f)
+            : base(texture, 300, 1.2f, 40, position, 1.2f, 220f, 1.2f)
         {
         }
 
-        public void Update(Vector2 targetPosition, GameTime gameTime)
+        public override bool FiresShells => true;
+
+        public override void Update(Vector2 targetPosition, GameTime gameTime)
         {
             base.Update(targetPosition, gameTime);
         }

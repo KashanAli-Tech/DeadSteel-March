@@ -9,8 +9,6 @@ namespace Coursework.Managers
         private UnitManager unitManager;
         private MoneyManager moneyManager;
 
-        private Random rand = new Random();
-
         // AI State Machine
         private enum AIState
         {
@@ -158,40 +156,19 @@ namespace Coursework.Managers
         private void SpawnSoldier()
         {
             if (moneyManager.Spend(10))
-                unitManager.EnemySoldiers.Add(
-                    new Coursework.GameObjects.Units.Soldier(
-                        unitManager.EnemySoldierTexture,
-                        RandomEnemySpawnPos()
-                    )
-                );
+                unitManager.SpawnEnemySoldier();
         }
 
         private void SpawnMachineGunner()
         {
             if (moneyManager.Spend(20))
-                unitManager.EnemyMachineGunners.Add(
-                    new Coursework.GameObjects.Units.MachineGunner(
-                        unitManager.EnemyMachineGunTexture,
-                        RandomEnemySpawnPos()
-                    )
-                );
+                unitManager.SpawnEnemyMachineGunner();
         }
 
         private void SpawnTank()
         {
             if (moneyManager.Spend(40))
-                unitManager.EnemyTanks.Add(
-                    new Coursework.GameObjects.Units.Tank(
-                        unitManager.EnemyTankTexture,
-                        RandomEnemySpawnPos()
-                    )
-                );
-        }
-
-        private Vector2 RandomEnemySpawnPos()
-        {
-            int y = rand.Next(50, 1325);
-            return new Vector2(1650, y); // near enemy tower
+                unitManager.SpawnEnemyTank();
         }
     }
 }

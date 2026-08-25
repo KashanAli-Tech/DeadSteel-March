@@ -1,10 +1,11 @@
 using Coursework.GameObjects;
-using Coursework.GameObjects.Units;
 using Microsoft.Xna.Framework;
-using System.Collections.Generic;
 
 namespace Coursework.Managers
 {
+    /// <summary>
+    /// Shell vs tower hits only. Units never damage other units here.
+    /// </summary>
     internal class CollisionManager
     {
         public UnitManager UnitManager;
@@ -25,150 +26,42 @@ namespace Coursework.Managers
 
         public void Update(GameTime gameTime)
         {
-            for (int i = ShellManager.Shells.Count - 1; i >= 0; i--)
+            ResolveShellHits();
+            UnitManager?.CleanupDeadUnits();
+        }
+
+        private void ResolveShellHits()
+        {
+            if (ShellManager == null)
+                return;
+
+            var shells = ShellManager.Shells;
+            for (int i = shells.Count - 1; i >= 0; i--)
             {
-                var shell = ShellManager.Shells[i];
+                var shell = shells[i];
+                if (shell == null || !shell.IsAlive)
+                    continue;
 
-                bool hit = false;
-
-                // PLAYER SHELLS
-                if (shell.IsPlayerShell)
-                {
-                    foreach (var u in UnitManager.EnemySoldiers)
-                    {
-                        if (shell.Rectangle.Intersects(u.Rectangle))
-                        {
-                            u.Health -= shell.Damage;
-                            hit = true;
-                            break;
-                        }
-                    }
-
-                    foreach (var u in UnitManager.EnemyTanks)
-                    {
-                        if (!hit && shell.Rectangle.Intersects(u.Rectangle))
-                        {
-                            u.Health -= shell.Damage;
-                            hit = true;
-                            break;
-                        }
-                    }
-
-                    foreach (var u in UnitManager.EnemyMachineGunners)
-                    {
-                        if (!hit && shell.Rectangle.Intersects(u.Rectangle))
-                        {
-                            u.Health -= shell.Damage;
-                            hit = true;
-                            break;
-                        }
-                    }
-
-                    if (!hit && EnemyTower != null && shell.Rectangle.Intersects(EnemyTower.Rectangle))
-                    {
-                        EnemyTower.TakeDamage(shell.Damage);
-                        hit = true;
-                    }
-                }
-
-
-                // ENEMY SHELLS
-                else
-                {
-                    foreach (var u in UnitManager.PlayerSoldiers)
-                    {
-                        if (shell.Rectangle.Intersects(u.Rectangle))
-                        {
-                            u.Health -= shell.Damage;
-                            hit = true;
-                            break;
-                        }
-                    }
-
-                    foreach (var u in UnitManager.PlayerTanks)
-                    {
-                        if (!hit && shell.Rectangle.Intersects(u.Rectangle))
-                        {
-                            u.Health -= shell.Damage;
-                            hit = true;
-                            break;
-                        }
-                    }
-
-                    foreach (var u in UnitManager.PlayerMachineGunners)
-                    {
-                        if (!hit && shell.Rectangle.Intersects(u.Rectangle))
-                        {
-                            u.Health -= shell.Damage;
-                            hit = true;
-                            break;
-                        }
-                    }
-
-                    if (!hit && PlayerTower != null && shell.Rectangle.Intersects(PlayerTower.Rectangle))
-                    {
-                        PlayerTower.TakeDamage(shell.Damage);
-                        hit = true;
-                    }
-                }
-
-
-                if (hit)
-                {
-                    ExplosionManager.AddExplosion(shell.Position, shell.Damage, 30f);
-                    SoundManager?.PlayExplosion();
-
-                    if (shell.IsPlayerShell)
-                        MoneyManager?.AddMoney(10);
-
-                    ShellManager.Shells.RemoveAt(i);
-                }
+                if (TryHitTower(shell))
+                    shells.RemoveAt(i);
             }
+        }
 
+        private bool TryHitTower(Shell shell)
+        {
+            // Player shells only hit the enemy tower; enemy shells only hit the player tower.
+            var targetTower = shell.IsPlayerShell ? EnemyTower : PlayerTower;
+            if (targetTower == null || targetTower.IsDead)
+                return false;
 
-            // Explosion damage
-            for (int e = ExplosionManager.Explosions.Count - 1; e >= 0; e--)
-            {
-                var ex = ExplosionManager.Explosions[e];
+            if (!shell.Rectangle.Intersects(targetTower.Rectangle))
+                return false;
 
-
-                foreach (var u in UnitManager.EnemySoldiers)
-                {
-                    if (ex.Bounds.Intersects(u.Rectangle))
-                        u.Health -= ex.Damage;
-                }
-
-                foreach (var u in UnitManager.EnemyTanks)
-                {
-                    if (ex.Bounds.Intersects(u.Rectangle))
-                        u.Health -= ex.Damage;
-                }
-
-                foreach (var u in UnitManager.EnemyMachineGunners)
-                {
-                    if (ex.Bounds.Intersects(u.Rectangle))
-                        u.Health -= ex.Damage;
-                }
-
-
-                foreach (var u in UnitManager.PlayerSoldiers)
-                {
-                    if (ex.Bounds.Intersects(u.Rectangle))
-                        u.Health -= ex.Damage;
-                }
-
-                foreach (var u in UnitManager.PlayerTanks)
-                {
-                    if (ex.Bounds.Intersects(u.Rectangle))
-                        u.Health -= ex.Damage;
-                }
-
-                foreach (var u in UnitManager.PlayerMachineGunners)
-                {
-                    if (ex.Bounds.Intersects(u.Rectangle))
-                        u.Health -= ex.Damage;
-                }
-            }
+            targetTower.TakeDamage(shell.Damage);
+            ExplosionManager?.AddExplosion(shell.Position, shell.Damage, 30f);
+            SoundManager?.PlayExplosion();
+            shell.IsAlive = false;
+            return true;
         }
     }
 }

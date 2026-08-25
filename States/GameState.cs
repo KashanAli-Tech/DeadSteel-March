@@ -10,38 +10,21 @@ namespace Coursework.States
 {
     internal class GameState : BaseState
     {
+        // 1 = Soldier, 2 = Machine Gunner, 3 = Tank (placeholder keybinds until proper UI buttons exist)
 
-        // I NEED TO ADD MORE VISUALS AFTER COMPLETING THE PROGRAM
-        // FOR NOW,  1 WILL SPAWN SOLDEIR, 2 WILL SPAWN MACHINE GUNNER AND 3 WILL SPANW TANK I WILL CHANGE IT LATER
-
-
+        private const int HealthBarWidth = 200;
 
         // VISUALS
         private Texture2D background;
         private Texture2D gameOverBackground;
         private Texture2D moneyIcon;
-        private Texture2D upgradeIcon;
-        private Texture2D buttonTexture;
 
         // Towers
         private Texture2D tower1Texture;
         private Texture2D tower2Texture;
 
         private Rectangle Tower1HealthRectangle;
-        private Texture2D Tower1healthTexture;
-
         private Rectangle Tower2HealthRectangle;
-        private Texture2D Tower2healthTexture;
-
-
-        // Units
-        private Texture2D soldierTexture;
-        private Texture2D machineGunnerTexture;
-        private Texture2D tankTexture;
-
-        // Projectiles & FX
-        private Texture2D shellTexture;
-        private Texture2D explosionTexture;
 
         // Fonts
         private SpriteFont defaultFont;
@@ -50,7 +33,7 @@ namespace Coursework.States
         private Song gameplayMusic;
 
         private KeyboardState previousKeyboardState;
-
+        private MouseState previousMouseState;
 
         // GAME OBJECTS & MANAGERS
         private UnitManager unitManager;
@@ -62,10 +45,15 @@ namespace Coursework.States
         private SoundManager soundManager;
         private UIManager uiManager;
         private EnemyAIManager enemyAI;
+        private UnitKillManager unitKillManager;
 
         // Towers
         public Tower[] Tower1 = new Tower[1];
         public Tower[] Tower2 = new Tower[1];
+        public Vector2 PlayerTowerV;
+        public Vector2 EnemyTowerV;
+
+        private bool IsGameOver => Tower1[0].IsDead || Tower2[0].IsDead;
 
         public GameState(Game1 game, GraphicsDevice graphicsDevice, ContentManager content)
             : base(game, graphicsDevice, content)
@@ -77,36 +65,19 @@ namespace Coursework.States
             // LOAD VISUALS
             background = Content.Load<Texture2D>("Background");
             gameOverBackground = Content.Load<Texture2D>("GameOverBackground");
-
             moneyIcon = Content.Load<Texture2D>("MoneyIcon");
-            upgradeIcon = Content.Load<Texture2D>("UpgradeIcon");
-            buttonTexture = Content.Load<Texture2D>("Button");
 
             tower1Texture = Content.Load<Texture2D>("PlayerTower");
             tower2Texture = Content.Load<Texture2D>("EnemyTower");
 
-
-            soldierTexture = Content.Load<Texture2D>("PlayerSoldier");
-            machineGunnerTexture = Content.Load<Texture2D>("PlayerMachineGunner");
-            tankTexture = Content.Load<Texture2D>("PlayerTank");
-
-            shellTexture = Content.Load<Texture2D>("ShellPic1");
-            explosionTexture = Content.Load<Texture2D>("ExplosionFinal");
-
             defaultFont = Content.Load<SpriteFont>("DefaultFont");
-
-            Tower1healthTexture = Content.Load<Texture2D>("HealthBar");
-            Tower2healthTexture = Content.Load<Texture2D>("HealthBar");
-
 
             // Music
             gameplayMusic = Content.Load<Song>("GameBackgroundMusic");
             MediaPlayer.IsRepeating = true;
             MediaPlayer.Play(gameplayMusic);
 
-            
             // CREATE MANAGERS
-            
             unitManager = new UnitManager();
             shellManager = new ShellManager();
             explosionManager = new ExplosionManager();
@@ -116,7 +87,7 @@ namespace Coursework.States
             soundManager = new SoundManager();
             uiManager = new UIManager();
 
-            // Load manager content
+            // Load manager content (each manager owns and loads its own textures)
             unitManager.LoadContent(Content);
             shellManager.LoadContent(Content);
             explosionManager.LoadContent(Content);
@@ -135,26 +106,26 @@ namespace Coursework.States
             // CREATE TOWERS
             Tower1[0] = new Tower(tower1Texture, new Rectangle(20, 250, 300, 400), 20, 250, 300, 400);
             Tower2[0] = new Tower(tower2Texture, new Rectangle(1600, 250, 300, 400), 1600, 250, 300, 400);
+
+            PlayerTowerV = new Vector2(Tower1[0].TowerX, Tower1[0].TowerY);
+            EnemyTowerV = new Vector2(Tower2[0].TowerX, Tower2[0].TowerY);
+
             unitManager.SetTowers(Tower1[0], Tower2[0]);
+            unitManager.SetTowerPositions(PlayerTowerV, EnemyTowerV);
 
             collisionManager.PlayerTower = Tower1[0];
             collisionManager.EnemyTower = Tower2[0];
 
-            // Set tower centers for unit targeting
-            Vector2 leftTowerCenter = new Vector2(
-                Tower1[0].Rectangle.X + Tower1[0].Rectangle.Width / 2,
-                Tower1[0].Rectangle.Y + Tower1[0].Rectangle.Height / 2
-            );
-
-            Vector2 rightTowerCenter = new Vector2(
-                Tower2[0].Rectangle.X + Tower2[0].Rectangle.Width / 2,
-                Tower2[0].Rectangle.Y + Tower2[0].Rectangle.Height / 2
-            );
-
-            unitManager.SetTowerPositions(leftTowerCenter, rightTowerCenter);
-
-            // ENEMY AI
+            // ENEMY AI - decides when to spawn enemy units
             enemyAI = new EnemyAIManager(unitManager, moneyManager, Tower1[0], Tower2[0]);
+
+            // UNIT KILL MANAGER - click-to-kill on enemy units, and the AI's gradual killing
+            // of player units over time. Tower2 (enemy tower) drives Panic Mode - see the
+            // ASSUMPTION comment on PanicModeTowerHealthThreshold in UnitKillManager.
+            unitKillManager = new UnitKillManager(unitManager, Tower2[0]);
+            unitKillManager.ExplosionManager = explosionManager;
+            unitKillManager.SoundManager = soundManager;
+            unitKillManager.MoneyManager = moneyManager;
         }
 
         public override void UnloadContent()
@@ -163,34 +134,45 @@ namespace Coursework.States
 
         public override void Update(GameTime gameTime)
         {
-
             var ks = Keyboard.GetState();
 
-            // Player spawn keys
-            if (ks.IsKeyDown(Keys.D1) && previousKeyboardState.IsKeyUp(Keys.D1))
-                unitManager.SpawnPlayerSoldier();
+            if (!IsGameOver)
+            {
+                // Player spawn keys
+                if (ks.IsKeyDown(Keys.D1) && previousKeyboardState.IsKeyUp(Keys.D1))
+                    unitManager.SpawnPlayerSoldier();
 
-            if (ks.IsKeyDown(Keys.D2) && previousKeyboardState.IsKeyUp(Keys.D2))
-                unitManager.SpawnPlayerMachineGunner();
+                if (ks.IsKeyDown(Keys.D2) && previousKeyboardState.IsKeyUp(Keys.D2))
+                    unitManager.SpawnPlayerMachineGunner();
 
-            if (ks.IsKeyDown(Keys.D3) && previousKeyboardState.IsKeyUp(Keys.D3))
-                unitManager.SpawnPlayerTank();
+                if (ks.IsKeyDown(Keys.D3) && previousKeyboardState.IsKeyUp(Keys.D3))
+                    unitManager.SpawnPlayerTank();
 
-            // Update managers
-            unitManager.Update(gameTime);
-            shellManager.Update(gameTime);
-            explosionManager.Update(gameTime);
-            collisionManager.Update(gameTime);
-            
-            moneyManager.Update();
+                // Click-to-kill: only reacts to the click transitioning down this frame,
+                // same edge-trigger pattern as the keyboard spawn keys above.
+                var ms = Mouse.GetState();
+                if (ms.LeftButton == ButtonState.Pressed && previousMouseState.LeftButton == ButtonState.Released)
+                    unitKillManager.RegisterClick(ms.Position);
+                previousMouseState = ms;
 
-            // Enemy AI
-            enemyAI.Update(gameTime);
+                unitManager.Update(gameTime);
+                shellManager.Update(gameTime);
+                collisionManager.Update(gameTime);
+                explosionManager.Update(gameTime);
 
+                moneyManager.Update();
 
-            //Player health bar rectangles
-            Tower1HealthRectangle = new Rectangle(Tower1[0].TowerX, Tower1[0].TowerY - 20, (Tower1[0].TowerHealth)/ 5, 30);
-            Tower2HealthRectangle = new Rectangle(Tower2[0].TowerX, Tower2[0].TowerY - 20, (Tower2[0].TowerHealth)/ 5, 30);
+                // Enemy AI - spawning
+                enemyAI.Update(gameTime);
+
+                // Enemy AI - gradually kills player units, and handles player's click-to-kill bookkeeping
+                unitKillManager.Update(gameTime);
+            }
+
+            // Health bar rectangles - width scales off the tower's own max health,
+            // so this stays correct even if MaxTowerHealth ever changes.
+            Tower1HealthRectangle = new Rectangle(Tower1[0].TowerX, Tower1[0].TowerY - 20, (int)(Tower1[0].HealthPercentage * HealthBarWidth), 30);
+            Tower2HealthRectangle = new Rectangle(Tower2[0].TowerX, Tower2[0].TowerY - 20, (int)(Tower2[0].HealthPercentage * HealthBarWidth), 30);
 
             // Return to menu
             if (ks.IsKeyDown(Keys.M))
@@ -199,7 +181,6 @@ namespace Coursework.States
             }
 
             previousKeyboardState = ks;
-
         }
 
         public override void Draw(GameTime gameTime, SpriteBatch spriteBatch)
@@ -220,14 +201,27 @@ namespace Coursework.States
             spriteBatch.Draw(moneyIcon, new Vector2(20, 20), Color.White);
             spriteBatch.DrawString(defaultFont, moneyManager.Money.ToString(), new Vector2(70, 20), Color.Yellow);
 
-            uiManager.DrawHealthBar(spriteBatch, Tower1HealthRectangle, Tower1[0].TowerHealth, 1000);
-            uiManager.DrawHealthBar(spriteBatch, Tower2HealthRectangle, Tower2[0].TowerHealth, 1000);
+            uiManager.DrawHealthBar(spriteBatch, Tower1HealthRectangle, Tower1[0].TowerHealth, Tower1[0].MaxTowerHealth);
+            uiManager.DrawHealthBar(spriteBatch, Tower2HealthRectangle, Tower2[0].TowerHealth, Tower2[0].MaxTowerHealth);
 
             // Tower health bars
             uiManager.DrawTowerHealth(spriteBatch, Tower1[0], new Vector2(Tower1[0].TowerX + 43, Tower1[0].TowerY - 20));
             uiManager.DrawTowerHealth(spriteBatch, Tower2[0], new Vector2(Tower2[0].TowerX + 40, Tower2[0].TowerY - 20));
 
-            
+            // Game over overlay - previously gameOverBackground was loaded but never drawn.
+            if (IsGameOver)
+            {
+                spriteBatch.Draw(gameOverBackground, Vector2.Zero, Color.White);
+
+                string message = Tower1[0].IsDead ? "Defeat! Press M for menu" : "Victory! Press M for menu";
+                Vector2 textSize = defaultFont.MeasureString(message);
+                Vector2 textPosition = new Vector2(
+                    (GraphicsDevice.Viewport.Width - textSize.X) / 2f,
+                    (GraphicsDevice.Viewport.Height - textSize.Y) / 2f
+                );
+
+                spriteBatch.DrawString(defaultFont, message, textPosition, Color.White);
+            }
         }
     }
 }

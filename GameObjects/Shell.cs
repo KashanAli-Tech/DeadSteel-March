@@ -9,9 +9,10 @@ namespace Coursework.GameObjects
         public Vector2 Velocity;
         public int Damage;
         public float Speed;
-        private Texture2D texture;
         public bool IsAlive = true;
         public bool IsPlayerShell;
+
+        private readonly Texture2D texture;
 
         public Shell(Texture2D texture, Vector2 start, Vector2 target, bool isPlayerShell, int damage = 20, float speed = 800f)
         {
@@ -21,10 +22,11 @@ namespace Coursework.GameObjects
             Speed = speed;
             IsPlayerShell = isPlayerShell;
 
-            Vector2 dir = target - start;
-            if (dir == Vector2.Zero) dir = new Vector2(1, 0);
-            dir.Normalize();
-            Velocity = dir * Speed;
+            Vector2 direction = target - start;
+            if (direction == Vector2.Zero)
+                direction = new Vector2(isPlayerShell ? 1 : -1, 0);
+            direction.Normalize();
+            Velocity = direction * Speed;
         }
 
         public void Update(GameTime gameTime)
@@ -32,7 +34,6 @@ namespace Coursework.GameObjects
             float dt = (float)gameTime.ElapsedGameTime.TotalSeconds;
             Position += Velocity * dt;
 
-            // Off-screen kill
             if (Position.X < -100 || Position.X > 2100 || Position.Y < -100 || Position.Y > 1500)
                 IsAlive = false;
         }
