@@ -3,15 +3,11 @@ using Microsoft.Xna.Framework;
 
 namespace Coursework.Managers
 {
-    /// <summary>
-    /// Shell vs tower hits only. Units never damage other units here.
-    /// </summary>
     internal class CollisionManager
     {
         public UnitManager UnitManager;
         public ShellManager ShellManager;
         public ExplosionManager ExplosionManager;
-        public MoneyManager MoneyManager;
         public SoundManager SoundManager;
 
         public Tower PlayerTower;
@@ -27,6 +23,7 @@ namespace Coursework.Managers
         public void Update(GameTime gameTime)
         {
             ResolveShellHits();
+            ResolveExplosionHits();
             UnitManager?.CleanupDeadUnits();
         }
 
@@ -58,10 +55,37 @@ namespace Coursework.Managers
                 return false;
 
             targetTower.TakeDamage(shell.Damage);
-            ExplosionManager?.AddExplosion(shell.Position, shell.Damage, 30f);
+            ExplosionManager?.AddExplosion(targetTower.Center, shell.Damage, 20f);
             SoundManager?.PlayExplosion();
             shell.IsAlive = false;
             return true;
+        }
+
+        // circle check - old Bounds rect wasn't used anywhere else
+        private void ResolveExplosionHits()
+        {
+            if (ExplosionManager == null || UnitManager == null)
+                return;
+
+            foreach (var explosion in ExplosionManager.Explosions)
+            {
+                if (explosion == null || explosion.DamageApplied || explosion.Damage <= 0)
+                    continue;
+
+                explosion.DamageApplied = true;
+
+                foreach (var unit in UnitManager.GetAlivePlayerUnits())
+                {
+                    if (unit != null && explosion.Hits(unit.Center))
+                        unit.TakeDamage(explosion.Damage);
+                }
+
+                foreach (var unit in UnitManager.GetAliveEnemyUnits())
+                {
+                    if (unit != null && explosion.Hits(unit.Center))
+                        unit.TakeDamage(explosion.Damage);
+                }
+            }
         }
     }
 }

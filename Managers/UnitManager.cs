@@ -50,9 +50,10 @@ namespace Coursework.Managers
 
         // External managers
         public ShellManager ShellManager;
-        public ExplosionManager ExplosionManager;
         public SoundManager SoundManager;
-        public MoneyManager MoneyManager;
+
+        // same gap on both sides, and never further than a soldier can shoot
+        private const float TowerStopDistance = 70f;
 
         private Tower playerTower;
         private Tower enemyTower;
@@ -293,8 +294,10 @@ namespace Coursework.Managers
             {
                 foreach (var unit in GetAlivePlayerUnits())
                 {
-                    if (unit.Rectangle.Intersects(enemyTower.Rectangle))
-                        unit.Position.X = enemyTower.TowerX - 70;
+                    float stop = Math.Min(TowerStopDistance, unit.AttackRange);
+                    float stopX = enemyTower.TowerX - stop - 20;
+                    if (unit.Position.X > stopX)
+                        unit.Position.X = stopX;
                 }
             }
 
@@ -302,8 +305,10 @@ namespace Coursework.Managers
             {
                 foreach (var unit in GetAliveEnemyUnits())
                 {
-                    if (unit.Rectangle.Intersects(playerTower.Rectangle))
-                        unit.Position.X = playerTower.TowerX + playerTower.TowerWidth;
+                    float stop = Math.Min(TowerStopDistance, unit.AttackRange);
+                    float stopX = playerTower.TowerX + playerTower.TowerWidth + stop;
+                    if (unit.Position.X < stopX)
+                        unit.Position.X = stopX;
                 }
             }
         }
@@ -356,7 +361,7 @@ namespace Coursework.Managers
             if (ShellManager == null || ShellManager.ShellTexture == null || unit == null)
                 return;
 
-            var shell = new Shell(ShellManager.ShellTexture, unit.Position, towerTarget, isPlayer, unit.Damage, 900f);
+            var shell = new Shell(ShellManager.ShellTexture, unit.Center, towerTarget, isPlayer, unit.Damage, 900f);
             ShellManager.AddShell(shell);
             SoundManager?.PlayShoot();
         }

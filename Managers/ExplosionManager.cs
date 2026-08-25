@@ -16,7 +16,7 @@ namespace Coursework.Managers
             explosionTexture = content.Load<Texture2D>("ExplosionFinal");
         }
 
-        public void AddExplosion(Vector2 pos, int damage = 30, float radius = 40f)
+        public void AddExplosion(Vector2 pos, int damage = 30, float radius = 20f)
         {
             Explosions.Add(new Explosion(explosionTexture, pos, 0.5f, damage, radius));
         }
@@ -37,44 +37,5 @@ namespace Coursework.Managers
         }
     }
 }
-
-        /*internal class ShellExplosion
-        {
-
-            public ShellExplosion(Texture2D newTexture, Vector2 ShellExplosionLocation, bool ExpFinished)
-            {
-                texture = newTexture;
-                ShellExploc = ShellExplosionLocation;
-                ExpDone = ExpFinished;
-            }
-
-            public void Draw(SpriteBatch spriteBatch)
-            {
-                spriteBatch.Draw(texture, destRect, sourceRect, Color.White);
-            }
-
-            public void Update(GameTime gameTime)
-            {
-                elapsed += (float)gameTime.ElapsedGameTime.TotalMilliseconds;
-                destRect = new Rectangle((int)ShellExploc.X - 64, (int)ShellExploc.Y - 57, 128, 115);
-
-                if (elapsed < delay)
-                {
-                    if (frames >= 500)
-                    {
-                        frames = 0;
-                        ExpDone = true;
-                    }
-                    else
-                    {
-                        frames++;
-                    }
-                    elapsed = 0;
-                    sourceRect = new Rectangle(127 * frames, 0, 128, 115);
-                }
-            }
-
-
-        }*/
 
 

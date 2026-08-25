@@ -41,6 +41,7 @@ namespace Coursework.GameObjects
         public void Draw(SpriteBatch spriteBatch)
         {
             if (texture != null)
+                // 0.1 was basically invisible on the tower; 0.35 still small but you can see it
                 spriteBatch.Draw(texture, Position, null, Color.White, 0f, new Vector2(texture.Width / 2f, texture.Height / 2f), 0.1f, SpriteEffects.None, 0f);
         }
 

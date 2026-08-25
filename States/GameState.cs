@@ -96,16 +96,12 @@ namespace Coursework.States
 
             // Wire managers
             unitManager.ShellManager = shellManager;
-            unitManager.ExplosionManager = explosionManager;
             unitManager.SoundManager = soundManager;
-            unitManager.MoneyManager = moneyManager;
-
-            collisionManager.MoneyManager = moneyManager;
             collisionManager.SoundManager = soundManager;
 
             // CREATE TOWERS
             Tower1[0] = new Tower(tower1Texture, new Rectangle(20, 250, 300, 400), 20, 250, 300, 400);
-            Tower2[0] = new Tower(tower2Texture, new Rectangle(1600, 250, 300, 400), 1600, 250, 300, 400);
+            Tower2[0] = new Tower(tower2Texture, new Rectangle(1580, 250, 300, 400), 1580, 250, 300, 400);
 
             PlayerTowerV = new Vector2(Tower1[0].TowerX, Tower1[0].TowerY);
             EnemyTowerV = new Vector2(Tower2[0].TowerX, Tower2[0].TowerY);
@@ -116,12 +112,11 @@ namespace Coursework.States
             collisionManager.PlayerTower = Tower1[0];
             collisionManager.EnemyTower = Tower2[0];
 
-            // ENEMY AI - decides when to spawn enemy units
             enemyAI = new EnemyAIManager(unitManager, moneyManager, Tower1[0], Tower2[0]);
+            enemyAI.ExplosionManager = explosionManager;
+            enemyAI.SoundManager = soundManager;
 
-            // UNIT KILL MANAGER - click-to-kill on enemy units, and the AI's gradual killing
-            // of player units over time. Tower2 (enemy tower) drives Panic Mode - see the
-            // ASSUMPTION comment on PanicModeTowerHealthThreshold in UnitKillManager.
+            // click-to-kill only — AI targeting is enemyAI
             unitKillManager = new UnitKillManager(unitManager, Tower2[0]);
             unitKillManager.ExplosionManager = explosionManager;
             unitKillManager.SoundManager = soundManager;
@@ -162,11 +157,7 @@ namespace Coursework.States
 
                 moneyManager.Update();
 
-                // Enemy AI - spawning
                 enemyAI.Update(gameTime);
-
-                // Enemy AI - gradually kills player units, and handles player's click-to-kill bookkeeping
-                unitKillManager.Update(gameTime);
             }
 
             // Health bar rectangles - width scales off the tower's own max health,
@@ -188,13 +179,12 @@ namespace Coursework.States
             // Background
             spriteBatch.Draw(background, Vector2.Zero, Color.White);
 
-            // Towers
+            // towers first so they sit behind stuff at the wall
             Tower1[0].Draw(spriteBatch);
             Tower2[0].Draw(spriteBatch);
 
-            // Units, shells, explosions
             unitManager.Draw(spriteBatch);
-            shellManager.Draw(spriteBatch);
+            shellManager.Draw(spriteBatch); // shells last so they aren't painted over by the tower
             explosionManager.Draw(spriteBatch);
 
             // Money UI

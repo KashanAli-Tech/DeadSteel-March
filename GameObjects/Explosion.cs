@@ -5,28 +5,25 @@ namespace Coursework.GameObjects
 {
     internal class Explosion
     {
-        private const int TotalFrames =30;
+        private const int TotalFrames = 30;
         private const float SecondsPerFrame = 0.001f;
         public Vector2 Position;
         public int Damage;
         public float Radius;
+        public bool DamageApplied;
         private readonly Texture2D texture;
         private float frameTimer;
         private int currentFrame;
 
-        public Explosion(Texture2D texture, Vector2 position, float lifetime, int damage = 30, float radius = 40f)
+        public Explosion(Texture2D texture, Vector2 position, float lifetime, int damage = 30, float radius = 20f)
         {
             this.texture = texture;
             Position = position;
             Damage = damage;
             Radius = radius;
-            // 'lifetime' kept as a parameter for backwards compatibility with existing callers;
-            // actual duration is driven by the frame animation (TotalFrames * SecondsPerFrame) below.
+            _ = lifetime; // animation length is just TotalFrames now
         }
 
-        // BUG FIX: previously this compared an internal Timer (which resets to 0 every frame tick)
-        // against Lifetime, so it was almost never true and explosions never got removed.
-        // Now it's tied to the same frame counter the animation actually uses.
         public bool IsFinished => currentFrame >= TotalFrames;
 
         public void Update(GameTime gameTime)
@@ -55,6 +52,10 @@ namespace Coursework.GameObjects
             spriteBatch.Draw(texture, Position, sourceRect, Color.White, 0f, new Vector2(frameWidth / 2f, frameHeight / 2f), 1f, SpriteEffects.None, 0f);
         }
 
-        public Rectangle Bounds => new Rectangle((int)(Position.X - Radius), (int)(Position.Y - Radius), (int)(Radius * 2), (int)(Radius * 2));
+        public bool Hits(Vector2 point)
+        {
+            float r = Radius;
+            return Vector2.DistanceSquared(Position, point) <= r * r;
+        }
     }
 }
