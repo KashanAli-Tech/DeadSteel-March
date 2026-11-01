@@ -3,11 +3,13 @@ using Microsoft.Xna.Framework.Graphics;
 
 namespace Coursework.UI
 {
+    // a small reusable drawing helper that takes a cooldown fraction without controlling the timer itself
     internal class CooldownBar
     {
         private Texture2D white;
         public CooldownBar(Texture2D white) { this.white = white; }
 
+        // clamping the supplied fraction keeps the blue fill within the bar's width
         public void Draw(SpriteBatch sb, Vector2 pos, float pct)
         {
             int w = 50, h = 6;

@@ -3,6 +3,7 @@ using Microsoft.Xna.Framework;
 
 namespace Coursework.Managers
 {
+    // keeps hit detection separate from moving and drawing units, shells and explosions
     internal class CollisionManager
     {
         public UnitManager UnitManager;
@@ -20,6 +21,7 @@ namespace Coursework.Managers
             ExplosionManager = explosionManager;
         }
 
+        // resolving hits before cleaning up units removes enemies or allies killed by those hits
         public void Update(GameTime gameTime)
         {
             ResolveShellHits();
@@ -27,6 +29,7 @@ namespace Coursework.Managers
             UnitManager?.CleanupDeadUnits();
         }
 
+        // looping backwards lets a shell be removed after a hit without skipping the next list entry
         private void ResolveShellHits()
         {
             if (ShellManager == null)
@@ -44,13 +47,14 @@ namespace Coursework.Managers
             }
         }
 
+        // using the shell's side selects the opposing tower, so it cannot directly hit its own tower
         private bool TryHitTower(Shell shell)
         {
-            // Player shells only hit the enemy tower; enemy shells only hit the player tower.
             var targetTower = shell.IsPlayerShell ? EnemyTower : PlayerTower;
             if (targetTower == null || targetTower.IsDead)
                 return false;
 
+            // a rectangle overlap is a simple enough hit check for shells reaching the large tower target
             if (!shell.Rectangle.Intersects(targetTower.Rectangle))
                 return false;
 
@@ -61,7 +65,7 @@ namespace Coursework.Managers
             return true;
         }
 
-        // circle check - old Bounds rect wasn't used anywhere else
+        // checking both sides means any living unit inside the blast radius can take explosion damage
         private void ResolveExplosionHits()
         {
             if (ExplosionManager == null || UnitManager == null)
@@ -72,6 +76,7 @@ namespace Coursework.Managers
                 if (explosion == null || explosion.DamageApplied || explosion.Damage <= 0)
                     continue;
 
+                // marking the blast before checking units stops its damage being repeated on later frames
                 explosion.DamageApplied = true;
 
                 foreach (var unit in UnitManager.GetAlivePlayerUnits())

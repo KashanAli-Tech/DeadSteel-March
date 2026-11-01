@@ -7,93 +7,109 @@ using Coursework.UI;
 
 namespace Coursework.States
 {
+    // keeping the menu separate means its buttons and music do not need to run during gameplay
     internal class MenuState : BaseState
     {
-        // Visuals
         private Texture2D menuBackground;
         private Texture2D buttonTexture;
 
-        // Font
         private SpriteFont menuFont;
 
-        // Music
         private Song menuMusic;
 
-        // Buttons
         private Rectangle playButtonRect;
         private Rectangle quitButtonRect;
+        private MenuScreens menus;
+        private SettingsMenu settingsMenu;
+        private bool settingsOpen;
+        private MouseState previousMouse;
+        private KeyboardState previousKeyboard;
+        public bool IsSubmenuOpen => settingsOpen;
 
         public MenuState(Game1 game, GraphicsDevice graphicsDevice, ContentManager content)
             : base(game, graphicsDevice, content)
         {
         }
 
+        // loading menu assets once on entry, then setting up the clickable button areas
         public override void LoadContent()
         {
-            // load Visuals fror menu screen
-            menuBackground = Content.Load<Texture2D>("MenuBackground"); // load the background texture from content folder
-            buttonTexture = Content.Load<Texture2D>("Button"); // load the button texture from content folder
+            menuBackground = Content.Load<Texture2D>("MenuBackground");
+            buttonTexture = Content.Load<Texture2D>("Button");
 
-            // Font for the text on buttons and game name
-            menuFont = Content.Load<SpriteFont>("DefaultFont"); // load the font file from content folder
+            menuFont = Content.Load<SpriteFont>("DefaultFont");
+            menus = new MenuScreens(GraphicsDevice, Content, menuFont);
+            settingsMenu = new SettingsMenu(menus);
+            previousMouse = Mouse.GetState();
+            previousKeyboard = Keyboard.GetState();
 
-            // Music that will play whne the user is in the menu screen
-            menuMusic = Content.Load<Song>("MenuBackgroundMusic"); // load the background music from content folder
-            MediaPlayer.IsRepeating = true; // the music should keep repeating unitl the player leaves the menu screen
-            MediaPlayer.Play(menuMusic);   // using mediaplayer to play music
+            menuMusic = Content.Load<Song>("MenuBackgroundMusic");
+            // looping the menu track so it does not go quiet while the player is choosing an option
+            MediaPlayer.IsRepeating = true;
+            MediaPlayer.Play(menuMusic);
 
-            // button setup
-            playButtonRect = new Rectangle(700, 450, 500, 120); // centre of the screen so user can clearly see
-            quitButtonRect = new Rectangle(700, 600, 500, 120);// 250 y coordinates below than play button
+            playButtonRect = new Rectangle(700, 450, 500, 120);
+            quitButtonRect = new Rectangle(700, 600, 500, 120);
         }
 
         public override void UnloadContent()
         {
+            menus.Dispose();
+            MediaPlayer.Stop();
         }
 
+        // using the mouse position and button areas to decide which menu option was selected
         public override void Update(GameTime gameTime)
         {
-            // get the current state of the keyboard
             var mouse = Mouse.GetState();
+            var keyboard = Keyboard.GetState();
+            if (settingsOpen)
+            {
+                if (settingsMenu.Update(mouse, previousMouse) || (keyboard.IsKeyDown(Keys.Escape) && previousKeyboard.IsKeyUp(Keys.Escape)))
+                    settingsOpen = false;
+                previousMouse = mouse;
+                previousKeyboard = keyboard;
+                return;
+            }
+            bool clicked = mouse.LeftButton == ButtonState.Pressed && previousMouse.LeftButton == ButtonState.Released;
 
-
-            // check whether Play button is clicked if mouse is left clicked and that click was in coordinates of the button rectangle
-            if (mouse.LeftButton == ButtonState.Pressed &&
+            // a press inside the play rectangle requests gameplay through the existing state-switch method
+            if (clicked &&
                 playButtonRect.Contains(mouse.Position)) 
             {
                 Game.ChangeState(new GameState(Game, GraphicsDevice, Content));
-                // if clicked then, change the current state to gamestate
             }
 
-            // check whether Quit button is clicked if mouse is left clicked and that click was in coordinates of the button rectangle
-            if (mouse.LeftButton == ButtonState.Pressed &&
+            if (clicked &&
                 quitButtonRect.Contains(mouse.Position))
             {
-                Game.Exit(); // if clicked then, exit the game
+                Game.Exit();
             }
+            if (menus.Clicked(new Rectangle(700, 750, 500, 120), mouse, previousMouse)) settingsOpen = true;
+            previousMouse = mouse;
+            previousKeyboard = keyboard;
         }
 
+        // drawing the background first so the title and buttons stay visible on top
         public override void Draw(GameTime gameTime, SpriteBatch spriteBatch)
         {
-            // Draw the Background whcihc covers the whole screen
             spriteBatch.Draw(menuBackground, Vector2.Zero, Color.White);
 
-            // Draw the textbox that says the Name of the Game
             spriteBatch.DrawString(menuFont, "DEADSTEEL MARCH",
                 new Vector2(800, 200), Color.Red);
 
-            // Draw the  Play Button
             spriteBatch.Draw(buttonTexture, playButtonRect, Color.White);
+            // positioning each label from its button rectangle so the text moves with the button
             spriteBatch.DrawString(menuFont, "PLAY",
                 new Vector2(playButtonRect.X + 200, playButtonRect.Y + 35),
-                Color.Black);
-            // Changed the X coordinate addition from 180 to 200
+                Color.White);
 
-            // Draw the Quit Button
             spriteBatch.Draw(buttonTexture, quitButtonRect, Color.White);
             spriteBatch.DrawString(menuFont, "QUIT",
                 new Vector2(quitButtonRect.X + 200, quitButtonRect.Y + 35),
-                Color.Black);
+                Color.White);
+            if (settingsOpen) settingsMenu.Draw(spriteBatch, Mouse.GetState());
+            else menus.Button(spriteBatch, new Rectangle(700, 750, 500, 120), "SETTINGS", Mouse.GetState());
         }
     }
 }

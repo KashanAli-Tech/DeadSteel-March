@@ -4,6 +4,7 @@ using Microsoft.Xna.Framework.Input;
 
 namespace Coursework.UI
 {
+    // groups the button's area, appearance and mouse checks so the same drawing code can be reused
     internal class Button
     {
         public Rectangle Rectangle;
@@ -27,6 +28,7 @@ namespace Coursework.UI
             this.Text = text;
         }
 
+        // this reports a click each update while the left button is held over the button
         public void Update(MouseState mouse)
         {
             IsHovered = Rectangle.Contains(mouse.Position);
@@ -38,12 +40,12 @@ namespace Coursework.UI
             }
         }
 
+        // changing the tint on hover gives feedback without needing a second button image
         public void Draw(SpriteBatch spriteBatch)
         {
-            // Draw button texture
             spriteBatch.Draw(texture, Rectangle, IsHovered ? hoverColor : normalColor);
 
-            // Center text
+            // measuring the label lets it stay centred even when its text or the button size changes
             Vector2 textSize = font.MeasureString(Text);
             Vector2 textPos = new Vector2(
                 Rectangle.X + (Rectangle.Width - textSize.X) / 2,

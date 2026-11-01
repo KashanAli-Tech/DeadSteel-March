@@ -6,6 +6,7 @@ using System.Collections.Generic;
 
 namespace Coursework.Managers
 {
+    // named difficulty choices make presets easier to select than using unexplained numbers
     internal enum AiDifficulty
     {
         Easy,
@@ -13,94 +14,109 @@ namespace Coursework.Managers
         Hard
     }
 
-    // spawning + targeting + difficulty. click-to-kill lives in UnitKillManager, not here.
+    // keeps enemy spawning, target choices and phase changes separate from player input
     internal class EnemyAIManager
     {
-        // swap this (or call ApplyPreset) to retune the whole AI
-        public AiDifficulty DifficultyPreset = AiDifficulty.Normal;
-
-        // ---- kill / targeting ----
-        public int AiDamage = 100;
+        // presets and phase settings are kept here so the ai can be balanced without changing the tree structure
+        public int AiDamage = 200;
         public float EarlyKillInterval = 1f;
-        public float MidKillInterval = 5f;
-        public float LateKillInterval = 2.5f;
-        public float PanicKillInterval = 1f;
-        public float CloseGroupPixels = 80f; // "several are close" window
+        public float MidKillInterval = 0.8f;
+        public float LateKillInterval = 0.6f;
+        public float PanicKillInterval = 0.4f;
+        public float CloseGroupPixels = 180f;
 
-        // ---- spawn ----
-        public float EarlySpawnInterval = 3f;
-        public float MidSpawnInterval = 2.5f;
-        public float LateSpawnInterval = 2f;
-        public float PanicSpawnInterval = 1.4f;
+        // separate intervals allow spawn frequency to change between game phases
+        public float EarlySpawnInterval = 0.1f;
+        public float MidSpawnInterval = 0.3f;
+        public float LateSpawnInterval = 0.1f;
+        public float PanicSpawnInterval = 0.01f;
 
-        // weights don't need to add to 1, we just roll against the total
-        public float EarlySoldierWeight = 0.85f;
-        public float EarlyMgWeight = 0.15f;
-        public float EarlyTankWeight = 0.0f;
+        // weights change the chance of each unit type instead of forcing the same spawn order every match
+        public float EarlySoldierWeight = 0.4f;
+        public float EarlyMgWeight = 0.35f;
+        public float EarlyTankWeight = 0.25f;
 
-        public float MidSoldierWeight = 0.4f;
-        public float MidMgWeight = 0.45f;
-        public float MidTankWeight = 0.15f;
+        public float MidSoldierWeight = 0.1f;
+        public float MidMgWeight = 0.3f;
+        public float MidTankWeight = 0.6f;
 
-        public float LateSoldierWeight = 0.2f;
-        public float LateMgWeight = 0.3f;
-        public float LateTankWeight = 0.5f;
+        public float LateSoldierWeight = 0.05f;
+        public float LateMgWeight = 0.15f;
+        public float LateTankWeight = 0.8f;
 
-        public float PanicSoldierWeight = 0.1f;
-        public float PanicMgWeight = 0.25f;
-        public float PanicTankWeight = 0.65f;
+        public float PanicSoldierWeight = 0.02f;
+        public float PanicMgWeight = 0.08f;
+        public float PanicTankWeight = 0.9f;
 
-        public int SoldierCost = 10;
-        public int MachineGunnerCost = 20;
-        public int TankCost = 40;
+        public float EarlyDifficultyScale = 3f;
+        public float MidDifficultyScale = 5f;
+        public float LateDifficultyScale = 7f;
+        public float PanicDifficultyScale = 15f;
+        public float DifficultyUpdateInterval = 3f;
 
-        // ---- difficulty scale (applied onto UnitManager for new enemy units) ----
-        public float EarlyDifficultyScale = 0.6f;
-        public float MidDifficultyScale = 0.75f;
-        public float LateDifficultyScale = 0.9f;
-        public float PanicDifficultyScale = 1.1f;
-        public float DifficultyUpdateInterval = 5f;
-
-        // ---- phase timing ----
-        public float MidGameStartSeconds = 60f;
-        public float LateGameStartSeconds = 150f;
-        public float PanicHealthPercent = 0.3f;
-
+        public float MidGameStartSeconds = 30f;
+        public float LateGameStartSeconds = 60f;
+        public float PanicHealthPercent = 0.65f;
         public GamePhase CurrentPhase { get; private set; } = GamePhase.EarlyGame;
 
         public ExplosionManager ExplosionManager;
         public SoundManager SoundManager;
 
         private readonly UnitManager unitManager;
-        private readonly MoneyManager moneyManager;
-        private readonly Tower playerTower;
         private readonly Tower enemyTower;
         private readonly Random rand = new Random();
 
-        // three separate clocks so you can tweak them without stepping on each other
+        // separate timers let targeting, spawning and difficulty changes happen at their own intervals
         private float elapsedSeconds;
         private float targetingTimer;
         private float spawnTimer;
         private float difficultyTimer;
+        private float dt;
 
-        public EnemyAIManager(UnitManager unitManager, MoneyManager moneyManager, Tower playerTower, Tower enemyTower)
+        private readonly IBtNode root;
+
+        // applying the starting preset before building the tree makes its first timers use the selected settings
+        public EnemyAIManager(UnitManager unitManager, MoneyManager moneyManager, Tower playerTower, Tower enemyTower, AiDifficulty difficulty = AiDifficulty.Normal)
         {
             this.unitManager = unitManager;
-            this.moneyManager = moneyManager;
-            this.playerTower = playerTower;
             this.enemyTower = enemyTower;
 
-            ApplyPreset(DifficultyPreset);
+            // the menu difficulties share normal phase weights and target intervals, with strength and spawning scaled below
+            ApplyPreset(AiDifficulty.Normal);
+            // small multipliers keep the existing normal timings, weights and target choices intact
+            float strength = difficulty == AiDifficulty.Easy ? .85f : difficulty == AiDifficulty.Hard ? 1.15f : 1f;
+            float interval = difficulty == AiDifficulty.Easy ? 1.2f : difficulty == AiDifficulty.Hard ? .85f : 1f;
+            AiDamage = (int)Math.Round(AiDamage * strength);
+            EarlyDifficultyScale *= strength; MidDifficultyScale *= strength;
+            LateDifficultyScale *= strength; PanicDifficultyScale *= strength;
+            EarlySpawnInterval *= interval; MidSpawnInterval *= interval;
+            LateSpawnInterval *= interval; PanicSpawnInterval *= interval;
             targetingTimer = EarlyKillInterval;
             spawnTimer = EarlySpawnInterval;
             difficultyTimer = 0f;
             unitManager.EnemyDifficultyScale = EarlyDifficultyScale;
+
+            // building the tree once avoids recreating the same checks each frame
+            // each sequence checks its own timer before running its action
+            root = new ParallelNode(
+                new SequenceNode(
+                    new ConditionNode(() => TickTimer(ref targetingTimer)),
+                    new ActionNode(DoTargeting)
+                ),
+                new SequenceNode(
+                    new ConditionNode(() => TickTimer(ref spawnTimer)),
+                    new ActionNode(DoSpawning)
+                ),
+                new SequenceNode(
+                    new ConditionNode(() => TickTimer(ref difficultyTimer)),
+                    new ActionNode(DoDifficultyUpdate)
+                )
+            );
         }
 
+        // keeping each preset's values together makes spawn rates, attack timings and starting strength easier to adjust
         public void ApplyPreset(AiDifficulty preset)
         {
-            DifficultyPreset = preset;
-
             if (preset == AiDifficulty.Easy)
             {
                 AiDamage = 100;
@@ -149,22 +165,33 @@ namespace Coursework.Managers
             }
             else
             {
-                // Normal - baseline
-                AiDamage = 35;
-                EarlyKillInterval = 8f;
-                MidKillInterval = 5f;
+                AiDamage = 100;
+
+                EarlyKillInterval = 5f;
+                MidKillInterval = 3.5f;
                 LateKillInterval = 2.5f;
-                PanicKillInterval = 1f;
+                PanicKillInterval = 1.5f;
 
-                EarlySpawnInterval = 3f;
-                MidSpawnInterval = 2.5f;
-                LateSpawnInterval = 2f;
-                PanicSpawnInterval = 1.4f;
+                EarlySpawnInterval = 1f;
+                MidSpawnInterval = 1;
+                LateSpawnInterval = 1.5f;
+                PanicSpawnInterval = 1f;
 
-                EarlySoldierWeight = 0.85f; EarlyMgWeight = 0.15f; EarlyTankWeight = 0f;
-                MidSoldierWeight = 0.4f; MidMgWeight = 0.45f; MidTankWeight = 0.15f;
-                LateSoldierWeight = 0.2f; LateMgWeight = 0.3f; LateTankWeight = 0.5f;
-                PanicSoldierWeight = 0.1f; PanicMgWeight = 0.25f; PanicTankWeight = 0.65f;
+                EarlySoldierWeight = 0.85f;
+                EarlyMgWeight = 0.15f;
+                EarlyTankWeight = 0f;
+
+                MidSoldierWeight = 0.4f;
+                MidMgWeight = 0.45f;
+                MidTankWeight = 0.15f;
+
+                LateSoldierWeight = 0.2f;
+                LateMgWeight = 0.3f;
+                LateTankWeight = 0.5f;
+
+                PanicSoldierWeight = 0.1f;
+                PanicMgWeight = 0.25f;
+                PanicTankWeight = 0.65f;
 
                 EarlyDifficultyScale = 0.6f;
                 MidDifficultyScale = 0.75f;
@@ -173,17 +200,27 @@ namespace Coursework.Managers
             }
         }
 
+        // using elapsed seconds keeps the ai timers tied to game time rather than how many frames have passed
         public void Update(GameTime gameTime)
         {
-            float dt = (float)gameTime.ElapsedGameTime.TotalSeconds;
+            dt = (float)gameTime.ElapsedGameTime.TotalSeconds;
             elapsedSeconds += dt;
             CurrentPhase = DeterminePhase();
 
-            UpdateTargeting(dt);
-            UpdateSpawning(dt);
-            UpdateDifficulty(dt);
+            // ticking the root visits the targeting, spawning and difficulty branches in one place
+            root.Tick();
         }
 
+        // passing the timer by reference updates its stored value; the matching action resets it when it becomes due
+        private bool TickTimer(ref float timer)
+        {
+            timer -= dt;
+            if (timer > 0f)
+                return false;
+            return true;
+        }
+
+        // checking low enemy tower health first lets panic mode take priority over the normal time-based phases
         private GamePhase DeterminePhase()
         {
             if (enemyTower != null && enemyTower.HealthPercentage <= PanicHealthPercent)
@@ -194,20 +231,17 @@ namespace Coursework.Managers
             return GamePhase.EarlyGame;
         }
 
-        // ---- targeting (own timer) ----
 
-        private void UpdateTargeting(float dt)
+        // resetting the targeting timer before picking a unit means an empty battlefield still waits until the next check
+        private void DoTargeting()
         {
-            targetingTimer -= dt;
-            if (targetingTimer > 0f)
-                return;
-
             targetingTimer = KillIntervalFor(CurrentPhase);
 
             BaseUnit target = PickPlayerUnitToDamage();
             if (target == null)
                 return;
 
+            // checking the change from alive to dead means the death effect only happens for a killing hit
             bool wasAlive = target.IsAlive;
             target.TakeDamage(AiDamage);
 
@@ -218,6 +252,7 @@ namespace Coursework.Managers
             }
         }
 
+        // selecting an interval by phase keeps targeting frequency separate from the target-picking algorithm
         private float KillIntervalFor(GamePhase phase)
         {
             switch (phase)
@@ -229,7 +264,7 @@ namespace Coursework.Managers
             }
         }
 
-        // closest to the enemy tower wins; if a few are bunched up, tanks first
+        // choosing threats within a distance band keeps distant heavy units from taking priority over nearby attackers
         private BaseUnit PickPlayerUnitToDamage()
         {
             var units = new List<BaseUnit>();
@@ -241,6 +276,7 @@ namespace Coursework.Managers
 
             Vector2 towerPos = enemyTower != null ? enemyTower.Center : unitManager.EnemyTowerV;
 
+            // the first pass finds how close the nearest player unit is to the enemy tower
             float closest = float.MaxValue;
             foreach (var u in units)
             {
@@ -255,10 +291,12 @@ namespace Coursework.Managers
             foreach (var u in units)
             {
                 float d = Vector2.Distance(u.Center, towerPos);
+                // this compares distances from the tower, rather than distances between the units themselves
                 if (d > closest + CloseGroupPixels)
                     continue;
 
                 int threat = ThreatOf(u);
+                // higher threat wins, with distance breaking ties between units of the same threat
                 if (threat > bestThreat || (threat == bestThreat && d < bestDist))
                 {
                     best = u;
@@ -270,6 +308,7 @@ namespace Coursework.Managers
             return best;
         }
 
+        // ranking tanks above machine gunners and soldiers gives the ai a simple target priority
         private static int ThreatOf(BaseUnit unit)
         {
             if (unit is Tank) return 3;
@@ -277,18 +316,15 @@ namespace Coursework.Managers
             return 1;
         }
 
-        // ---- spawning (own timer) ----
 
-        private void UpdateSpawning(float dt)
+        // resetting the spawn timer here gives the next spawn the interval for the current phase
+        private void DoSpawning()
         {
-            spawnTimer -= dt;
-            if (spawnTimer > 0f)
-                return;
-
             spawnTimer = SpawnIntervalFor(CurrentPhase);
             TrySpawnForPhase(CurrentPhase);
         }
 
+        // choosing the spawn interval by phase allows the ai to change its pace during the match
         private float SpawnIntervalFor(GamePhase phase)
         {
             switch (phase)
@@ -300,11 +336,13 @@ namespace Coursework.Managers
             }
         }
 
+        // using one random roll across the combined weights gives each unit type its configured chance
         private void TrySpawnForPhase(GamePhase phase)
         {
             GetWeights(phase, out float soldierW, out float mgW, out float tankW);
 
             float total = soldierW + mgW + tankW;
+            // falling back to a soldier means an all-zero set of weights still produces a valid spawn
             if (total <= 0f)
             {
                 SpawnSoldier();
@@ -320,6 +358,7 @@ namespace Coursework.Managers
                 SpawnTank();
         }
 
+        // returning all three weights together keeps them matched to the same phase
         private void GetWeights(GamePhase phase, out float soldier, out float mg, out float tank)
         {
             switch (phase)
@@ -335,45 +374,33 @@ namespace Coursework.Managers
             }
         }
 
+
+        // asking the unit manager to create enemies keeps spawn positions and unit setup out of the ai
         private void SpawnSoldier()
         {
-            if (moneyManager != null && !moneyManager.Spend(SoldierCost))
-                return;
             unitManager.SpawnEnemySoldier();
         }
 
         private void SpawnMachineGunner()
         {
-            if (moneyManager != null && !moneyManager.Spend(MachineGunnerCost))
-            {
-                SpawnSoldier(); // couldn't afford mg, drop down
-                return;
-            }
             unitManager.SpawnEnemyMachineGunner();
         }
 
         private void SpawnTank()
         {
-            if (moneyManager != null && !moneyManager.Spend(TankCost))
-            {
-                SpawnMachineGunner();
-                return;
-            }
             unitManager.SpawnEnemyTank();
         }
 
-        // ---- difficulty scale (own timer) ----
 
-        private void UpdateDifficulty(float dt)
+
+        // changing the unit manager's scale affects enemies spawned afterwards rather than rewriting existing units
+        private void DoDifficultyUpdate()
         {
-            difficultyTimer -= dt;
-            if (difficultyTimer > 0f)
-                return;
-
             difficultyTimer = DifficultyUpdateInterval;
             unitManager.EnemyDifficultyScale = ScaleFor(CurrentPhase);
         }
 
+        // keeping strength multipliers separate from spawn intervals allows the two to be balanced independently
         private float ScaleFor(GamePhase phase)
         {
             switch (phase)
